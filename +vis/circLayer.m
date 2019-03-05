@@ -13,7 +13,7 @@ y = round(dims(2) * (0.9^(dims(2)-23)+1));
 
 dd = sqrt(xx.^2 + yy.^2);
 img = taper(dd) + taper(-dd) - 1; % Border anti-aliasing
-img = [rot90(img,2), flipud(img); fliplr(img), img]; % Put quarters together
+img = single([rot90(img,2), flipud(img); fliplr(img), img]); % Put quarters together
 
   function y = taper(x)
     y = -2*(x - radius*(1 - 0.5*border))./(radius*border);
