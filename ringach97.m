@@ -1,13 +1,13 @@
-oris = 0:18:162; % set of orientations, deg
+oris = 0:20:180; % set of orientations, deg
 phases = 90:90:360; % set of phases, deg
 presentationRate = 30; % Hz
-sf = 0.2; %spatial frequency, cyc/deg
+sf = 1; %spatial frequency, cyc/deg
 winlen = 10; % length of histogram window, frames
 
 figh = figure('Name', 'Press ctrl on horizontal grating',...
   'Position', [680 250 560 700], 'NumberTitle', 'off');
-vbox = uiextras.VBox('Parent', figh);
-[t, setElemsFun] = sig.playground([], vbox);
+vbox = uix.VBox('Parent', figh);
+[t, setElemsFun] = sig.playgroundPTB([], vbox);
 sigbox = t.Node.Net;
 axh = axes('Parent', vbox, 'NextPlot', 'replacechildren', 'XTick', oris);
 xlabel(axh, 'Orientation');

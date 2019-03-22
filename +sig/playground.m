@@ -17,12 +17,12 @@ set(bui.parentFigure(parent), 'DeleteFcn', @cleanup);
 tmr = timer('ExecutionMode', 'fixedSpacing', 'Period', 5e-3,...
   'TimerFcn', @process);
 
-vbox = uiextras.VBox('Parent', parent);
+vbox = uix.VBox('Parent', parent);
 
 [vc, vcc] = vis.component(vbox.UIContainer); %error with jave and new openGL
 vc.clearColour([0.5 0.5 0.5 1]);
 
-btnbox = uiextras.HBox('Parent', vbox);
+btnbox = uix.HBox('Parent', vbox);
 vbox.Sizes = [-1 30];
 btnh = uicontrol('Parent', btnbox, 'Style', 'pushbutton',...
   'String', 'Play', 'Callback', @(~,~)startstop());

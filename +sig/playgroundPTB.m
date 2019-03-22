@@ -19,7 +19,7 @@ tmr = timer('ExecutionMode', 'fixedSpacing', 'Period', 5e-3,...
   'TimerFcn', @process, 'Name', 'MainLoop');
 cp = hw.CursorPosition;
 
-vbox = uiextras.VBox('Parent', parent);
+vbox = uix.VBox('Parent', parent);
 
 % Get number of available screens
 nScreens = Screen('Screens');
@@ -28,7 +28,7 @@ vc = Screen('OpenWindow', screenNum, 0, [0,0,1280,600], 32);
 Screen('FillRect', vc, 255/2);
 Screen('Flip', vc);
 
-btnbox = uiextras.HBox('Parent', vbox);
+btnbox = uix.HBox('Parent', vbox);
 vbox.Sizes = 30;
 btnh = uicontrol('Parent', btnbox, 'Style', 'pushbutton',...
   'String', 'Play', 'Callback', @(~,~)startstop());

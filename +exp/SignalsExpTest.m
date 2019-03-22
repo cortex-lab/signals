@@ -1,14 +1,26 @@
 classdef SignalsExpTest < handle
+%% Description
   %SIGNALSEXPTEST Contains *Signals* information for running a *Signals* Exp Def from EXPTEST
   %
   % See also: EXPTEST, EXP.SIGNALSEXP
-  %
-  % Todo: set properties and methods attributes appropriately
+  
+%% properties
+
+  % can be set in command line to improve visualization
+  properties (Hidden = true)
+    ScreenH % handle to PTB Screen which displays visual stimuli
+  end
+  
+%% properties (SetAccess = ?exp.ExpTest)
+
+  % set by 'exp.ExpTest'
+  properties (SetAccess = ?exp.ExpTest)
+    ExpTest % 'ExpTest' object - parent for this class (see constructor method) 
+  end
   
 %% properties (SetAccess = private)
 
-  properties (SetAccess = private)
-    
+  properties (SetAccess = private)  
     Clock = hw.ptb.Clock % 'Clock' object that returns current time (in s)
     QuitKey = KbName('q') % Keyboard key for quitting experiment and closing 'ScreenH'
     Net % 'sig.Net' object - signals network
@@ -36,18 +48,8 @@ classdef SignalsExpTest < handle
       'timestamp', cell(500,1))
     NumSignalUpdates = 0
     GlobalPars % global parameters in GUI
-    CondPars % conditional parameters in GUI
-        
+    CondPars % conditional parameters in GUI   
   end
-
-%% properties (Exposed)
-
-  properties % can be set by 'exp.ExpTest', or in command line to improve visualization
-    ScreenH % handle to PTB Screen which displays visual stimuli
-    ExpTest % 'ExpTest' object - parent for this class (see constructor method) 
-  end
-  
-  
   
 %% methods (Exposed)
   methods % can be called via 'exp.ExpTest', or Test Panel GUI, or command line (for instantiation, deletion, or visualization)

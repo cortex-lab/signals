@@ -1,9 +1,9 @@
 classdef ExpTest < handle
+%% Description
 %EXPTEST Creates an experiment test panel for testing *Signals* Exp Defs on a personal PC
 %
-% See also: SIGNALSEXPTEST, EUI.MCONTROL
-%
-% Usage:
+% See also: EXP.SIGNALSEXPTEST, EUI.MCONTROL
+%% Usage:
 % 1) Run the command 'expTestPanel = exp.ExpTest;' to launch the 
 % 'ExpTestPanel' GUI
 % 2) (Optional) Use the 'Select Subject...' drop-down menu if you want to
@@ -26,16 +26,21 @@ classdef ExpTest < handle
 % *Note: While the experiment is running, the position of the mouse
 % cursor will be set to emulate the wheel. Press the 'c' keyboard key
 % while experiment is running to disable/enable this feature.
-%
-% Todo: set properties and methods attributes appropriately
   
-%% properties (Exposed)
+%% properties
   
-  properties % can be chosen in GUI, in command line to improve visualization, or set by 'exp.SignalsExpTest'
+  % can be set in GUI or command line to improve visualization
+  properties
     ScreenH % handle to PTB Screen which displays visual stimuli
     LivePlotFig % handle to figure for live-plotting signals
+  end 
+  
+%% properties (SetAccess = ?exp.SignalsExpTest)
+
+  % set by 'exp.SignalsExpTest'
+  properties (SetAccess = ?exp.SignalsExpTest)
     SignalsExpTest % 'SignalsExpTest' object which contains info for running the *Signals* experiment
-  end
+  end 
   
 %% properties (SetAccess = private)
   
@@ -52,7 +57,7 @@ classdef ExpTest < handle
     ExpDefPath % fullfile path of ExpDef
     OptionsButton % handle to 'Options' push-button
     LivePlot = 1 % option for live-plotting signals during experiment
-    SaveBlock = 0 % option for saving 'block' file at experiment end
+    SaveBlock = 1 % option for saving 'block' file at experiment end
     StartButton % handle to 'Start' push-button
     ParamPanel % 'uix.Panel' object containing the 'ParamGrid'; child of 'MainGrid'
     ParamGrid % 'uix.GridFlex' object containing 'ParamTopBox' and 'ParamBottomBox'; child of 'ParamPanel'
@@ -70,7 +75,9 @@ classdef ExpTest < handle
   
 %% methods (Exposed)
 
-  methods % can be called via Test Panel GUI, or command line (for instantiation, deletion, or visualization)
+  % can be called via Test Panel GUI, or command line (for instantiation, 
+  % deletion, or visualization)
+  methods 
     
     function obj = ExpTest
       % constructor method runs the 'buildUI' method to create the ExpTest
