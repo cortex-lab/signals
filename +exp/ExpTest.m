@@ -39,7 +39,8 @@ classdef ExpTest < handle
 
   % set by 'exp.SignalsExpTest'
   properties (SetAccess = ?exp.SignalsExpTest)
-    SignalsExpTest % 'SignalsExpTest' object which contains info for running the *Signals* experiment
+    SigExpTest % 'SignalsExpTest' object which contains info for running the *Signals* experiment
+    IsRunning = false % flag for if Exp Def is running
   end 
   
 %% properties (SetAccess = private)
@@ -69,7 +70,6 @@ classdef ExpTest < handle
     ParamEditor % 'eui.ParamEditor' object for viewing/changing the current parameters
     RewardCount % uicontrol text object for reward delivered
     TrialNumCount % uicontrol text object for trial number
-    IsRunning = 0 % flag for if Exp Def is running
     QuitKey = KbName('q') % Keyboard key for quitting experiment and closing 'ScreenH'
   end
   
@@ -126,11 +126,11 @@ classdef ExpTest < handle
       
       if obj.IsRunning %  stop experiment
         fprintf('<strong> ExpTestPanel Experiment Ending </strong>\n');
-        obj.SignalsExpTest.quit;
-        obj.SignalsExpTest = [];
+        obj.SigExpTest.quit;
+        obj.SigExpTest = [];
         obj.IsRunning = false;
       else % start experiment
-        if isempty(obj.SignalsExpTest)
+        if isempty(obj.SigExpTest)
           error('Select Signals Exp Def Before Starting Experiment.');
         end
         livePlotH = findobj('Type', 'Figure', 'Name', 'LivePlot');
@@ -140,7 +140,7 @@ classdef ExpTest < handle
         fprintf('<strong> ExpTestPanel Experiment Starting </strong>\n');
         obj.StartButton.set('String', 'Stop');
         obj.IsRunning = true;
-        obj.SignalsExpTest.run;
+        obj.SigExpTest.run;
       end
       
     end
@@ -153,7 +153,7 @@ classdef ExpTest < handle
         close('LivePlot')
       end
       if isequal(obj.ScreenH, Screen('Windows'))
-        Screen('Close', obj.SignalsExpTest.ScreenH)
+        Screen('Close', obj.SigExpTest.ScreenH)
       end
     end
     
@@ -234,8 +234,8 @@ classdef ExpTest < handle
     function getSetExpDef(obj, ~, ~)
     % gets and sets *signals* Exp Def
     
-      if ~isempty(obj.LivePlotFig)
-        close(obj.LivePlotFig)
+      if ~isempty(findobj('Type', 'figure', 'Name', 'LivePlot'))
+        close('LivePlot')
       end
       obj.TrialNumCount.String = '0'; obj.RewardCount.String = '0';
       [mfile, mpath] = uigetfile('*.m', 'Select Exp Def');
@@ -244,7 +244,7 @@ classdef ExpTest < handle
       obj.ExpDefPath = fullfile(mpath, mfile);
       obj.loadParameters(obj.ParametersProfile);
       obj.setPTB;
-      obj.SignalsExpTest = exp.SignalsExpTest(obj); % create fresh 'SignalsExpTest' object   
+      obj.SigExpTest = exp.SignalsExpTest(obj); % create fresh 'SignalsExpTest' object   
     end
     
     function loadParameters(obj, profile)

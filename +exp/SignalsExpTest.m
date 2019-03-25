@@ -7,7 +7,7 @@ classdef SignalsExpTest < handle
 %% properties
 
   % can be set in command line to improve visualization
-  properties (Hidden = true)
+  properties
     ScreenH % handle to PTB Screen which displays visual stimuli
   end
   
@@ -15,7 +15,7 @@ classdef SignalsExpTest < handle
 
   % set by 'exp.ExpTest'
   properties (SetAccess = ?exp.ExpTest)
-    ExpTest % 'ExpTest' object - parent for this class (see constructor method) 
+    ETest % 'ExpTest' object - parent for this class (see constructor method) 
   end
   
 %% properties (SetAccess = private)
@@ -58,7 +58,7 @@ classdef SignalsExpTest < handle
     % 'parent' is the 'ExpTest' object which instantiates this
     % 'SignalsExpTest' object
     
-      obj.ExpTest = parent;
+      obj.ETest = parent;
       clock = obj.Clock;
       clockFun = clock.now;
       obj.Inputs = sig.Registry(clockFun);
@@ -77,7 +77,7 @@ classdef SignalsExpTest < handle
       obj.Inputs.cursor = obj.Net.origin('cursor');
       obj.Inputs.keyboard = obj.Net.origin('keyboard');
       [~, globalStruct, condStruct] = ...
-        obj.ExpTest.Parameters.toConditionServer;
+        obj.ETest.Parameters.toConditionServer;
       advanceTrial = obj.Net.origin('advanceTrial');
       obj.GlobalPars = obj.Net.origin('globalPars');
       obj.CondPars = obj.Net.origin('condPars');
@@ -85,8 +85,8 @@ classdef SignalsExpTest < handle
         obj.GlobalPars, obj.CondPars, advanceTrial);
       obj.Events.trialNum = obj.Events.newTrial.scan(@plus, 0); % track trial number
       lastTrialOver = then(~hasNext, true);
-      expDefFun = fileFunction(obj.ExpTest.Parameters.Struct.defFunction);
-      obj.Data.expDef = obj.ExpTest.Parameters.Struct.defFunction;
+      expDefFun = fileFunction(obj.ETest.Parameters.Struct.defFunction);
+      obj.Data.expDef = obj.ETest.Parameters.Struct.defFunction;
       expDefFun(obj.T, obj.Events, obj.Params, obj.VisStim, obj.Inputs,...
         obj.Outputs, obj.Audio)
       % set listeners which will proceed experiment after 'expStart' is
@@ -96,7 +96,7 @@ classdef SignalsExpTest < handle
         obj.Events.endTrial.into(advanceTrial) % endTrial signals advance
         advanceTrial.map(true).keepWhen(hasNext).into(obj.Events.newTrial) % newTrial if more
         lastTrialOver.into(obj.Events.expStop) % newTrial if more
-        obj.Events.expStop.onValue(@(~)quit(obj));
+        obj.Events.expStop.onValue(@(~) obj.quit);
         obj.Inputs.cursor.into(obj.Inputs.wheel)
         ];
       
@@ -104,12 +104,12 @@ classdef SignalsExpTest < handle
       % and 'Reward Delivered' on 'ExpTestPanel'
       setCtrlStr = @(h)@(v)set(h, 'String', toStr(v));
       obj.Listeners = [obj.Listeners
-        obj.Events.trialNum.onValue(setCtrlStr(obj.ExpTest.TrialNumCount));
+        obj.Events.trialNum.onValue(setCtrlStr(obj.ETest.TrialNumCount));
         ];
       if isfield(obj.Outputs, 'reward')
         obj.Listeners = [obj.Listeners
         obj.Outputs.reward.scan(@plus, 0).onValue(...
-          setCtrlStr(obj.ExpTest.RewardCount))
+          setCtrlStr(obj.ETest.RewardCount))
         ];
       end
       
@@ -118,12 +118,12 @@ classdef SignalsExpTest < handle
       obj.CondPars.post(condStruct);
       
       % create a listener for user changing parameters in test panel GUI
-      paramChangeL = addlistener(obj.ExpTest.ParamEditor,... 
+      paramChangeL = addlistener(obj.ETest.ParamEditor,... 
         'Changed', @(src,event) obj.userChangedParam);
       
       % get access to PTB Screen and set viewing model (to emulate the 3
       % screens in Burgess Steering Wheel Task)
-      obj.ScreenH = obj.ExpTest.ScreenH;
+      obj.ScreenH = obj.ETest.ScreenH;
       obj.Occ = vis.init(obj.ScreenH);
       
       screenDimsCm = [20 25]; %[width_cm height_cm of real experiment screen]
@@ -144,7 +144,7 @@ classdef SignalsExpTest < handle
       obj.init;
       Screen('Flip', obj.ScreenH);
       obj.createLivePlot;
-      obj.Events.expStart.post(obj.ExpTest.Parameters.Struct.expRef);
+      obj.Events.expStart.post(obj.ETest.Parameters.Struct.expRef);
       obj.mainLoop;
       obj.cleanup;
       obj.saveData;
@@ -155,13 +155,14 @@ classdef SignalsExpTest < handle
     % updates parameter to new value
     
       [~, newGlobalParStruct, newCondParStruct] = ...
-        obj.ExpTest.ParamEditor.Parameters.toConditionServer;
+        obj.ETest.ParamEditor.Parameters.toConditionServer;
       obj.GlobalPars.post(newGlobalParStruct);
       obj.CondPars.post(newCondParStruct);
     end
     
     function quit(obj)
     % stops the experiment when the user clicks the GUI 'Stop' button
+    % or when 'expStop' in an exp def evaluates to true
     
       tmrs = timerfind;
       if ~isempty(tmrs)
@@ -171,7 +172,8 @@ classdef SignalsExpTest < handle
       
       obj.Data.endStatus = 1;
       obj.IsLooping = false;
-      obj.ExpTest.StartButton.set('String', 'Start');
+      obj.ETest.IsRunning = false;
+      obj.ETest.StartButton.set('String', 'Start');
     end
     
   end
@@ -236,19 +238,19 @@ classdef SignalsExpTest < handle
     function createLivePlot(obj)
     % creates the 'LivePlot' figure, if user-specified via GUI
     
-      if obj.ExpTest.LivePlot
-        obj.ExpTest.LivePlotFig = figure('Name', 'LivePlot',...
+      if obj.ETest.LivePlot
+        obj.ETest.LivePlotFig = figure('Name', 'LivePlot',...
           'NumberTitle', 'off', 'Color', 'w',...
           'DeleteFcn', @(~,~) emptyHandle(obj));
         sig.timeplot(obj.T, obj.Events,...
-          'Parent', obj.ExpTest.LivePlotFig, 'xlabelOff', 1);
+          'Parent', obj.ETest.LivePlotFig, 'xlabelOff', 1);
       end
       
       function emptyHandle(obj)
       % callback for deleting the 'LivePlot' figure: 
       % clears the figure handle in the 'ExpTest' object
       
-        obj.ExpTest.LivePlotFig = [];
+        obj.ETest.LivePlotFig = [];
       end
     end
     
@@ -303,7 +305,7 @@ classdef SignalsExpTest < handle
       [pressed, keysPressed] = KbQueueCheck();
       if pressed
         if any(keysPressed(obj.QuitKey))
-            obj.ExpTest.startStopExp;
+            obj.ETest.startStopExp;
         elseif any(keysPressed(obj.CursorAsWheelKey))
           if ~obj.CursorAsWheel % if we're re-enabling CursorAsWheel
             obj.CursorDelta = obj.CursorDelta -... 
@@ -373,7 +375,7 @@ classdef SignalsExpTest < handle
     function saveData(obj)
     % saves an experiment block file, if user-specified via GUI
     
-      if obj.ExpTest.SaveBlock
+      if obj.ETest.SaveBlock
         g = groot;
         scrnSz = g.ScreenSize(3:4); % get screensize for setting position of following dialog boxes
         dirpath = 0; % path for saving block file
@@ -422,7 +424,7 @@ classdef SignalsExpTest < handle
       
       g = groot;
       scrnSz = g.ScreenSize(3:4); % get screensize for setting position of following dialog boxes
-      expRef = obj.ExpTest.Parameters.Struct.expRef; % get expRef
+      expRef = obj.ETest.Parameters.Struct.expRef; % get expRef
       blockpath = strcat(dirpath, '\', expRef, '_Block.mat');
       filenameDH = dialog('Position', [scrnSz(1)/2, 100, 300 250],... 
       'Name', 'Enter File Name', 'WindowStyle', 'normal');
