@@ -153,7 +153,7 @@ classdef ExpTest < handle
         close('LivePlot')
       end
       if isequal(obj.ScreenH, Screen('Windows'))
-        Screen('Close', obj.SigExpTest.ScreenH)
+        Screen('Close', obj.ScreenH)
       end
     end
     

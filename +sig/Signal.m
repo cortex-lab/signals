@@ -357,34 +357,39 @@ classdef Signal < handle
       b = map(a, @floor, 'floor(%s)');
     end
     
-    function a = abs(x)
+    function b = abs(a)
       % New signal carrying the absolute value of the input signal
-      a = map(x, @abs, '|%s|');
+      b = map(a, @abs, '|%s|');
     end
     
-    function a = sign(x)
+    function b = sign(a)
       % New signal carrying the sign function of the input signal
-      a = map(x, @sign, 'sgn(%s)');
+      b = map(a, @sign, 'sgn(%s)');
     end
     
-    function c = sin(a)
+    function b = sin(a)
       % New signal carrying the sine function of the input signal
-      c = map(a, @sin, 'sin(%s)');
+      b = map(a, @sin, 'sin(%s)');
     end
     
-    function c = cos(a)
+    function b = cos(a)
       % New signal carrying the cosine function of the input signal
-      c = map(a, @cos, 'cos(%s)');
+      b = map(a, @cos, 'cos(%s)');
     end
     
-    function c = uminus(a)
+    function b = uminus(a)
       % New signal carrying the negation of the input signal
-      c = map(a, @uminus, '-%s');
+      b = map(a, @uminus, '-%s');
     end
     
-    function c = not(a)
+    function b = not(a)
       % New signal carrying the logical NOT of the input signal
-      c = map(a, @not, '~%s');
+      b = map(a, @not, '~%s');
+    end
+    
+    function b = sum(a, varargin)
+      % New signal carrying the sum of the input signal
+      b = map(a, @sum, 'sum(%s)');
     end
     
     function c = plus(a, b)

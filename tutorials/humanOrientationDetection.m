@@ -64,23 +64,30 @@ totalKeyPresses = responseKeyPress.scan(@plus, 0);
 stop = totalKeyPresses > 100;
 
 %% Plot the orientation history at spacebar click
-% get monitor screensize for setting location of figure
+% set figure and axes
 gr = groot;
 scrnSz = gr.ScreenSize([3,4]);
-histFigName = sprintf(['Histogram of last %d orientations for each "%s" key '...
-'press'], winLen, responseKey); 
-% set figure name and position (to upper right-hand corner of screen)
+histFigName = sprintf('Orientation Detection Histogram'); 
 histFig = figure('Name', histFigName, 'NumberTitle', 'off',...
   'Position', [scrnSz(1)-560, scrnSz(2)-500, 560 420]);
 histFigAx = axes('Parent', histFig, 'NextPlot', 'replaceChildren',...
-  'XTick', oris, 'XTickLabel', cellstr(num2str(oris')), 'XLim', [0 162]);
+  'XTick', oris, 'XTickLabel', cellstr(num2str(oris')),... 
+  'XLim', [oris(1) oris(end)], 'YTick', [], 'YTickLabel', []);
+histFigTitle = sprintf(['Cumulative Histogram of Previous %d Orientations \n'... 
+  'at each "%s" Key Press for Experiment Duration'], winLen, responseKey); 
+title(histFigAx, histFigTitle);
+colorbar(histFigAx);
 
 % Each time there's a 'responseKey' press, add the 'oriHistory' snapshot to
-% an accumulating histogram
-histogram = oriHistory.at(responseKeyPress).scan(@plus,... 
-  zeros(numel(oris), winLen));
-histogram.onValue(@(data) imagesc(oris, 1:winLen, flipud(data'),... 
-  'Parent', histFigAx));
+% an accumulating histogram of each orientation
+% this only sums each element together (e.g. (i,j) + (i,j)). What we want
+% to do is sum across rows (e.g. sum(i,:)).
+oriHistAtPress = oriHistory.at(responseKeyPress);
+oriHistVec = sum(oriHistAtPress.transpose, 1);
+
+oriHistogram = oriHistVec.scan(@plus, zeros(numel(oris)));
+oriHistogram.onValue(@(data) imagesc(oris, 1:winLen, data'),... 
+  'Parent', histFigAx);
 
 %% add to the 'events' structure the signals we want to save
 events.endTrial = endTrial;
@@ -89,4 +96,6 @@ events.t = t;
 events.responseKeyPress = responseKeyPress;
 events.sampler = sampler;
 events.currOri = currOri;
-events.histogram = histogram;
+events.oriHistAtPress = oriHistAtPress;
+events.oriHistVec = oriHistVec;
+events.oriHistogram = oriHistogram;
