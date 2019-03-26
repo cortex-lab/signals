@@ -86,8 +86,8 @@ oriHistAtPress = oriHistory.at(responseKeyPress);
 oriHistVec = sum(oriHistAtPress.transpose, 1);
 
 oriHistogram = oriHistVec.scan(@plus, zeros(numel(oris)));
-oriHistogram.onValue(@(data) imagesc(oris, 1:winLen, data'),... 
-  'Parent', histFigAx);
+oriHistogram.onValue(@(data) imagesc(oris, 1:winLen, data',... 
+  'Parent', histFigAx));
 
 %% add to the 'events' structure the signals we want to save
 events.endTrial = endTrial;
