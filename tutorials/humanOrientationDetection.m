@@ -9,14 +9,16 @@ function humanOrientationDetection(t, events, params, visStim, inputs, outputs, 
 % each of 4 different phases of [90:90:360] degrees, each with a spatial 
 % frequency of 0.1 cycle/degree, at a presentation rate of 20 Hz). The 
 % display of each grating will be chosen uniformly randomly from the set 
-% of 40. The user's task is to press the 'response key' when a horizontal 
-% grating (orientation of 0 degrees) is displayed. The experiment lasts 4
-% minutes.
+% of 40. The user's task is to press the 'response key' when a vertical 
+% grating (orientation of 90 degrees) is displayed. The experiment lasts
+% for 100 response key presses.
 
 %% Running this exp def:
 % 1) Run the command: 'expTestPanel = exp.ExpTest;' to launch the
 % 'expTestPanel' GUI, and read the 'Usage' section in 'exp.ExpTest' for
-% using the GUI.
+% using the GUI. Via the "Options" button in the GUI, make sure the "Plot
+% Signals?" checkbox is unchecked, and the "Save Block file?" checkbox is
+% checked.
 % 2) Afterwards, run the script 'analyzeHOD' to visualize your performance.
 
 %% Creating the signals
@@ -53,21 +55,24 @@ grating.spatialFreq = sf;
 visStim.stim = grating; 
 
 % get the orientations of the last 'winLen' number of gratings
-oriMask = oris' == currOri; % orientation indicator vector
-oriHistory = oriMask.buffer(winLen); % buffer last few oriMasks
+oriMask = oris' == currOri; 
+oriHistory = oriMask.buffer(winLen);
 
 % end the trial after the spacebar is pressed
 endTrial = responseKeyPress.delay(0.5);
 
 % stop experiment when there have been 100 presses
 totalKeyPresses = responseKeyPress.scan(@plus, 0);
-stop = totalKeyPresses > 100;
+stop = totalKeyPresses == 100;
 
 %% Plot the orientation history at spacebar click
 % set figure and axes
 gr = groot;
 scrnSz = gr.ScreenSize([3,4]);
-histFigName = sprintf('Orientation Detection Histogram'); 
+histFigName = sprintf('Orientation Detection Histogram');
+% if it already exists, close the figure
+histFigToClose = findobj('type', 'figure', 'name', histFigName);
+if ~isempty(histFigToClose), close(histFigToClose); end
 histFig = figure('Name', histFigName, 'NumberTitle', 'off',...
   'Position', [scrnSz(1)-560, scrnSz(2)-500, 560 420]);
 histFigAx = axes('Parent', histFig, 'NextPlot', 'replaceChildren',...
@@ -80,19 +85,20 @@ colorbar(histFigAx);
 
 % Each time there's a 'responseKey' press, add the 'oriHistory' snapshot to
 % an accumulating histogram of each orientation
-% this only sums each element together (e.g. (i,j) + (i,j)). What we want
-% to do is sum across rows (e.g. sum(i,:)).
 oriHistAtPress = oriHistory.at(responseKeyPress);
 oriHistVec = sum(oriHistAtPress.transpose, 1);
+oriHistogram = oriHistVec.scan(@plus, zeros(numel(oris),1)');
 
-oriHistogram = oriHistVec.scan(@plus, zeros(numel(oris)));
-oriHistogram.onValue(@(data) imagesc(oris, 1:winLen, data',... 
-  'Parent', histFigAx));
+% create a listener for 'oriHistogram' that uses 'imagesc' to plot the
+% orientation history on 'oriHistogram' updates
+l = oriHistogram.onValue(@(data) imagesc(oris, 1:winLen, data,...
+  'Parent', histFigAx), 1);
+
+oriHistogram.onValue(@(data) imagesc(oris, 1:winLen, data));
 
 %% add to the 'events' structure the signals we want to save
 events.endTrial = endTrial;
 events.expStop = stop.then(1);
-events.t = t;
 events.responseKeyPress = responseKeyPress;
 events.sampler = sampler;
 events.currOri = currOri;
