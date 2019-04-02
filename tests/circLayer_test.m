@@ -2,7 +2,7 @@
 
 % preconditions
 net = sig.Net;
-load('circle.mat', 'circle');
+load([fileparts(which('addSignalsPaths')) '\tests\fixtures\data\circle.mat'], 'circle');
 
 %% Test one: standard inputs
 pos = [10 5];

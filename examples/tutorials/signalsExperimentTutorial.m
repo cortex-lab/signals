@@ -526,13 +526,13 @@ expStop = stop.then(1);
 leftVisStim = vis.grating(t);
 leftVisStim.azimuth = deltaWheel + azimuthDefault;
 leftVisStim.orientation = defaultOriLeft; % our signal with the randomly chosen orientation for the left stimulus
-leftVisStim.contrast = defaultContrastLeft(1); % for vector assigments to signal visual stimuli elements, we must index with '(1)'
+leftVisStim.contrast = defaultContrastLeft;
 leftVisStim.show = interactiveStart.to(endTrial);
 
 rightVisStim = vis.grating(t);
 rightVisStim.azimuth = deltaWheel + -azimuthDefault;
 rightVisStim.orientation = defaultOriRight; % our signal with the randomly chosen orientation for the right stimulus
-rightVisStim.contrast = defaultContrastRight(1); % for vector assigments to signal visual stimuli elements, we must index with '(1)'
+rightVisStim.contrast = defaultContrastRight;
 rightVisStim.show = interactiveStart.to(endTrial);
 
 visStim.left = leftVisStim; visStim.right = rightVisStim;
@@ -581,7 +581,7 @@ events.timeoutInstant = timeoutInstant;
 
 % 7) Let's now add parameters to our Exp Def. Parameters are typically
 % written at the end of an Exp Def in a 'try...catch...end' statement to
-% allow for exception handling
+% allow for exception handling. 
 
 try
   % Vis Stim Orientation as global parameters assigned to 'params'
