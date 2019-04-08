@@ -44,7 +44,7 @@ classdef VoidSignal < sig.Signal
     end
     
     function s = then(when, this)
-      s = this;
+      s = at(when, this);
     end
 
     
