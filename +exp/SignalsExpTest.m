@@ -144,7 +144,6 @@ classdef SignalsExpTest < handle
       obj.init;
       Screen('Flip', obj.ScreenH);
       obj.createLivePlot;
-      obj.Events.expStart.post(obj.ETest.Parameters.Struct.expRef);
       obj.mainLoop;
       obj.cleanup;
       obj.saveData;
@@ -274,6 +273,8 @@ classdef SignalsExpTest < handle
     % runs 'while' loop that updates *signals* reactive network during experiment
     
       obj.IsLooping = true;
+      obj.T.post(obj.Clock.now);
+      obj.Events.expStart.post(obj.ETest.Parameters.Struct.expRef);
       
       while obj.IsLooping
         obj.checkInput;

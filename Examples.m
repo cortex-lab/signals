@@ -3,7 +3,6 @@
 % and a few of the important functional methods associated.  Later, the
 % structure of a Signals Experiment will be introduced.
 
-%% 
 % Every signal is part of a network, managed through the 'sig.Net' object.
 % The network object holds all the ids of every signals node.  (FIXME Note 1 about underlying code)
 
@@ -723,9 +722,10 @@ origin.post(3)
 net = sig.Net;
 s = struct('A', now, 'B', rand);
 x = net.origin('struct');
+x.post(s);
 
 % The below would not work:
-x.post(s); A = x.A; % No appropriate method, property, or field 'A' for class 'sig.node.OriginSignal'.
+A = x.A; % No appropriate method, property, or field 'A' for class 'sig.node.OriginSignal'.
 % Deriving a subscriptable Signal allows us to subscript:
 x_sub = x.subscriptable(); % TODO Add note about subsref
 a = x_sub.A;

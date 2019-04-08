@@ -1,212 +1,182 @@
-function signalsPong(t, events, pars, visStim, inputs, outputs, audio)
-% This is a working example of pong in signals
-% To be run via ExpTestPanel GUI (exp.ExpTest)
-% 170328 - AP 
+function signalsPong(t, events, params, visStim, inputs, outputs, audio)
+% SIGNALSPONG runs a simple version of the classic game, pong, in signals
+%
+% This expdef runs a fairly simple version of pong. The ball's velocity 
+% constant, and the ball's trajectory does not depend on where on a paddle
+% or wall it hits, but only on the angle at which it hits.
+%
+% This exp def should be run via the ExpTestPanel GUI (exp.ExpTest)
+% 
+% Author: Jai Bhagat - adapted from Andy Peters
+%
+% Example: 
+%  expTestPanel = exp.ExpTest('signalsPong');
+%
+% todo: add world constants as signals parameters
 
-%% Define constants for the World 
+%% Define constants for the world (points of control)
+% The entire scope of the game is treated as a world, and the game's data
+% at any given time is treated as a world state
 
-% Paddle parameters
-paddleInitialY = 0; % initial height of paddle
-playerPaddleX = 160; % near right edge of screen 
-computerPaddleX = -160; % near left edge of screen
-paddleSz = [10,50]; % size in pixels
-playerPaddle = vis.patch(t,'rectangle');
-computerPaddle = vis.patch(t,'rectangle');
-computerPaddleVel = 3; % paddle velocity in y-direction
+% Experiment time constants
+updateTime = 0.01; % how often to update the world (i.e. move onto the next state) in s
 
-% Ball parameters
-ballSz = [5,5]; % size in pixels
-ballInitialY = 0;
-ballInitialX = 0;
-ballVelX = 3; % ball velocity in x-direction
-ballVelY = 3; % ball velocity in y-direction
-ball = vis.patch(t, 'circle');
+% Arena constants
+arenaSz = [190,105]; % [w h] in visual degrees
+arenaColour = [0 0 0]; % RGB color vector
+arenaCenterX = 0; % azimuth in visual degrees
+arenaCenterY = 0; % altitude in visual degrees
 
-% Game parameters
-% Create a struct with "game data", and create a subscriptable signal
-% from that struct which will be used to keep track of the game
-gameDataInitial.ballPos = [ballInitialX ballInitialY];
-gameDataInitial.ballVel = [ballVelX ballVelY];
-gameDataInitial.computerPaddlePos = [computerPaddleX paddleInitialY];
-gameDataInitial.computerPaddleVel = computerPaddleVel;
-gameDataInitial.playerPaddlePos = [playerPaddleX paddleInitialY];
-gameDataInitial.paddleSz = paddleSz;
+% Ball constants
+ballSz = [5,5]; % [majorAxis minorAxis] in visual degrees
+ballInitX = 0; % ball initial x-position
+ballInitY = 0; % ball initial y-position
+ballVel = 3; % ball velocity in visual degrees per second
+ballColour = [1 1 1]; % RGB color vector
 
-% Mouse parameters
-% Get the initial value of the y-position of the mouse when the experiment
-% starts. The y-position of the mouse will be used to control the paddle
+% Paddle constants
+paddleSz = [5,20]; % [w h] in visual degrees
+cpuPaddleColour = [1 1 1]; % RGB color vector
+cpuPaddleX = -90; % azimuth in visual degrees
+cpuPaddleInitY = 0; % altitude in visual degrees
+cpuPaddleVelInit = 0; % y-velocity in visual degrees per second
+playerPaddleColour = [1 1 1]; % RGB color vector
+playerPaddleX = 90; % near right edge of screen 
 
+% Mouse cursor constants
+cursorGain = 0.33; % set gain for cursor
+
+%% Define a world state
+% A state is a number - the time since experiment start. Here we use a
+% slower version of Signals' 't' signal in order to reduce the
+% computational load
+
+% set 'tUpdate': a slower version of 't'
+tUpdateMod = t - mod(t, updateTime);
+tUpdate = tUpdateMod.skipRepeats;
+startTime = events.expStart.map(true).map(@(~) GetSecs);
+curExpTime = tUpdate - startTime;
+
+%% Set mouse cursor parameters using wheel
+% Hardware input and mouse cursor parameters
+wheel = inputs.wheel; % get signal for wheel
+
+% create a function to return y-position of cursor
   function yPos = getYPos()
-    % GETYPOS uses PTB's 'GetMouse' function to return the mouse y-coordinate,
-    % in pixels
+    % GETYPOS uses PTB's 'GetMouse' function to return the cursor 
+    % y-coordinate, in pixels
     [~, yPos] = GetMouse();
   end
 
-mouseInitialY = events.expStart.map(true).map(@(~) getYPos);
-cursorGain = 0.33; % set gain for cursor
-%% Render the states (via helper functions)
-% A state is a number - the time elapsed from experiment start, given by 
-% 't', which we modify to 'tUpdate' for sake of limiting computational load
+% get cursor's initial y-position
+cursorInitialY = events.expStart.map(true).map(@(~) getYPos);
 
-updateTime = 0.01; % how often to update, in s
-tUpdateMod = t - mod(t, updateTime);
-tUpdate = tUpdateMod.skipRepeats;
+%% Define how the paddles' interactions update the world
 
-wheel = inputs.wheel; % get signal for wheel
+% 'cpuPaddleVel' needs to be an origin signal so that it can interact
+% mutually dependently with 'ballVelY': 'ballVelY' <--> 'cpuPaddleVel'.
+% As an origin signal, it can and will be posted into (via a listener) when
+% 'ballVelY' updates
+cpuPaddleVel = t.Node.Net.origin('cpuPaddleVel'); % y-velocity of the cpu paddle in visual degrees per second
+cpuPaddleVel.post(cpuPaddleVelInit);
+% create a signal that will update the y-position of the cpu's paddle
+% based on 'ballVelY'
+cpuPaddleYUpdateVal = cpuPaddleVel * curExpTime + cpuPaddleInitY;
+% make sure the y-value of the cpu's paddle is within the screen bounds
+cpuPaddleY = cond(cpuPaddleYUpdateVal > arenaSz(2)/2, arenaSz(2)/2,...
+  cpuPaddleYUpdateVal < -arenaSz(2)/2, -arenaSz(2)/2,... 
+  true, cpuPaddleYUpdateVal);
 
-% get y-value player's paddle updates to when moving the mouse
+% create a signal that will update the y-position of the player's paddle
+% based on cursor
 playerPaddleYUpdateVal =... 
-  (wheel.map(@(~) getYPos) - mouseInitialY) * cursorGain;
+  (wheel.map(@(~) getYPos) - cursorInitialY) * cursorGain;
 % make sure the y-value of the player's paddle is within the screen bounds
-playerPaddleY = cond(playerPaddleYUpdateVal > 90, 90,...
-  playerPaddleYUpdateVal < -90, -90, true, playerPaddleYUpdateVal);
+playerPaddleY = cond(playerPaddleYUpdateVal > arenaSz(2)/2, arenaSz(2)/2,...
+  playerPaddleYUpdateVal < -arenaSz(2)/2, -arenaSz(2)/2,... 
+  true, playerPaddleYUpdateVal);
 
-% create a function to run the game (update the world: state -> state)
+%% Define how ball's interactions update the world:
 
-  function gameData = runGame(gameData)
-    % Define the border along the top: reverse ball altitude velocity
-    if abs(gameData.ball_position(2)) >= 90
-      gameData.ball_velocity(2) = -gameData.ball_velocity(2);
-    end
-    
-    % Define the boundaries where the ball should bounce or score
-    if abs(gameData.ball_position(1)) >= 180
-      
-      % Reset the ball if it reaches the edge of the board
-      gameData.ball_position = [0,0];
-      gameData.ball_velocity = sign(rand(1,2) - 0.5).*[3,rand*3];
-      
-    elseif ...
-        (gameData.ball_position(1) <= gameData.computer_paddle_position(1) && ...
-        gameData.ball_position(2) <= gameData.computer_paddle_position(2)+(gameData.paddle_size(2)/2) && ...
-        gameData.ball_position(2) >= gameData.computer_paddle_position(2)-(gameData.paddle_size(2)/2)) || ...
-        (gameData.ball_position(1) >= gameData.player_paddle_azimuth && ...
-        gameData.ball_position(2) <= player_paddle_altitude+(gameData.paddle_size(2)/2) && ...
-        gameData.ball_position(2) >= player_paddle_altitude-(gameData.paddle_size(2)/2))
-      
-      % Reverse ball azimuth velocity when it hits a paddle
-      gameData.ball_velocity(1) = -gameData.ball_velocity(1);
-      
-    end
-    % Update the ball position
-    gameData.ball_position = gameData.ball_position + gameData.ball_velocity;
-    
-    % Update the computer paddle altitude
-    gameData.computer_paddle_position(2) = gameData.computer_paddle_position(2) + ...
-      gameData.computer_paddle_speed*sign(gameData.ball_position(2) - gameData.computer_paddle_position(2));
-    
-  end
+% 'ballX' and 'ballY' need to be origin signals so that they can interact 
+% mutually dependently with 'ballAngle': 
+% 'ballX' <--> 'ballAngle' 'ballY' <--> 'ballAngle'.
+% As origin signals, they can and will be posted into (via listeners) when  
+% 'ballAngle' updates
+ballX = t.Node.Net.origin('ballX');
+ballY = t.Node.Net.origin('ballY');
+ballX.post(ballInitX);
+ballY.post(ballInitY);
 
+% ball velocity/angle direction references:
+% at 0 degrees all velocity is in positive X, at 90 degrees all velocity is
+% in positive Y, at 180 degrees all velocity is in negative X, at 270 
+% degrees all velocity is in negative Y
 
-%% Set up update clock
-% Set updates for every 10 ms
+% initialize ball angle randomly between 0-360 degrees, and when ball comes 
+% into contact with a wall or paddle, change it's direction by 180 degrees
+ballInitAngle = rand*360;
+contact = merge(abs(ballY) > (arenaSz(2)/2),... % wall contact
+  ((ballX - playerPaddleX) < (paddleSz(1)/2)) & ((ballY-playerPaddleY) < (paddleSz(2)/2)),... % player paddle contact 
+  ((ballX - cpuPaddleX) < (paddleSz(1)/2)) & ((ballY-cpuPaddleY) < (paddleSz(2)/2))... % cpu paddle contact
+  ); 
+contactInstant = contact.then(180);
 
+% 'ballAngle' sets 'ballVelX' and 'bellVelY'
+ballAngle = contactInstant.scan(@minus, ballInitAngle); 
+ballVelX = ballVel * -cos(deg2rad(360-ballAngle));
+ballVelY = ballVel * sin(deg2rad(ballAngle));
 
+% define mutually dependent signals' interactions:
+% 'ballVelX' and 'ballVelY' set 'ballX', 'ballY' and 'cpuPaddleVel'
+ballXToPost = ballVelX * curExpTime + ballInitX;
+ballYToPost = ballVelY * curExpTime + ballInitY;
+cpuPaddleVelToPost = ballVelY * 0.75; % paddle velocity as fraction of ball velocity in visual degrees per second
 
-%%%% PADDLE PARAMETERS
+% use the 't' signal's listeners to listen to when 'ballVelX' and
+% 'ballVelY' update in order to update 'ballX', 'ballY', and 'cpuPaddleVel'
+t.Node.Listeners = [t.Node.Listeners, into(ballXToPost, ballX),... 
+  into(ballYToPost, ballY), into(cpuPaddleVelToPost, cpuPaddleVel)];
 
-%%%% PLAYER PADDLE
-player_paddle_altitude = wheel.delta.scan(@setPlayerPaddle,...
-  paddleInitialY);
-
-playerPaddle = vis.patch(t,'rectangle');
-playerPaddle.azimuth = playerPaddleX;
-playerPaddle.altitude = cond( ...
-    events.expStart,player_paddle_altitude, ...
-    true, 0);
+% create the paddles as 'vis.patch' rectangle subscriptable signals
+playerPaddle = vis.patch(t, 'rectangle');
 playerPaddle.dims = paddleSz;
+playerPaddle.altitude = playerPaddleY;
+playerPaddle.azimuth = playerPaddleX;
 playerPaddle.show = true;
+playerPaddle.colour = playerPaddleColour;
 
-%%%% COMPUTER POSITIONS
-% Need to group ball and paddle because they are co-dependent: this means
-% that they need to be updated simultaneously. Set up a structure with all
-% the computer parameters that will be updated
-game_data_initial.ball_position = [0,0];
-game_data_initial.ball_velocity = sign(rand(1,2) - 0.5).*[3,rand*3];
-game_data_initial.computer_paddle_position = [computerPaddleX,paddleInitialY];
-game_data_initial.computer_paddle_speed = 2;
-game_data_initial.player_paddle_azimuth = playerPaddleX;
-game_data_initial.paddle_size = paddleSz;
-% Feed in the player paddle altitude to the scan: this way the computer
-% always knows where the player paddle is and can use it as a value instead
-% of a signal, which makes things a lot easier
-game_data = player_paddle_altitude.at(tUpdate).scan(@runGame,game_data_initial).subscriptable;
+cpuPaddle = vis.patch(t, 'rectangle');
+cpuPaddle.dims = paddleSz;
+cpuPaddle.altitude = cpuPaddleY;
+cpuPaddle.azimuth = cpuPaddleX;
+cpuPaddle.show = true;
+cpuPaddle.colour = cpuPaddleColour;
 
-%%%% BALL
-ballSz = [5,5];
+% create arena as a 'vis.patch' rectangle subscriptable signal
+arena = vis.patch(t, 'rectangle');
+arena.dims = arenaSz;
+arena.colour = arenaColour;
+arena.azimuth = arenaCenterX;
+arena.altitude = arenaCenterY;
+arena.show = true;
 
-ball = vis.patch(t,'rectangle');
-ball.azimuth = game_data.ball_position(1);
-ball.altitude = game_data.ball_position(2);
+% create the ball as a 'vis.patch' circle subscriptable signal
+ball = vis.patch(t, 'circle');
 ball.dims = ballSz;
+ball.altitude = ballY;
+ball.azimuth = ballX;
 ball.show = true;
+ball.colour = ballColour;
 
-%%%% COMPUTER PADDLE
-computerPaddle = vis.patch(t,'rectangle');
-computerPaddle.azimuth = computerPaddleX;
-computerPaddle.altitude = game_data.computer_paddle_position(2);
-computerPaddle.dims = paddleSz;
-computerPaddle.show = true;
-
-%%%% SEND VISUAL COMPONENTS TO STIM HANDLER
-visStim.player_paddle = playerPaddle;
-visStim.computer_paddle = computerPaddle;
+% assign the arena, paddles, and ball to the 'visStim' subscriptable signal
+% handler
+visStim.arena = arena;
+visStim.playerPaddle = playerPaddle;
+visStim.cpuPaddle = cpuPaddle;
 visStim.ball = ball;
 
-%% Define events to save
-
 events.endTrial = events.newTrial.delay(5);
-
-end
-
-%% helper functions
-
-function playerPaddleY = paddleBoundary(playerPaddleY, wheel)
-
-% Update the position of the paddle, unless is it at the edge of the board,
-% in which case set the position as the edge.
-playerPaddleY = playerPaddleY + wheel;
-if playerPaddleY > 90
-    playerPaddleY = 90;
-elseif playerPaddleY < -90
-    playerPaddleY = -90;
-end
-
-end
-
-function game_data = update_game_data(game_data,player_paddle_altitude)
-
-% Define the border along the top: reverse ball altitude velocity
-if abs(game_data.ball_position(2)) >= 90
-    game_data.ball_velocity(2) = -game_data.ball_velocity(2);
-end
-
-% Define the boundaries where the ball should bounce or score
-if abs(game_data.ball_position(1)) >= 180
-    
-    % Reset the ball if it reaches the edge of the board
-    game_data.ball_position = [0,0];
-    game_data.ball_velocity = sign(rand(1,2) - 0.5).*[3,rand*3];
-    
-elseif ...
-        (game_data.ball_position(1) <= game_data.computer_paddle_position(1) && ...
-        game_data.ball_position(2) <= game_data.computer_paddle_position(2)+(game_data.paddle_size(2)/2) && ...
-        game_data.ball_position(2) >= game_data.computer_paddle_position(2)-(game_data.paddle_size(2)/2)) || ...
-        (game_data.ball_position(1) >= game_data.player_paddle_azimuth && ...
-        game_data.ball_position(2) <= player_paddle_altitude+(game_data.paddle_size(2)/2) && ...
-        game_data.ball_position(2) >= player_paddle_altitude-(game_data.paddle_size(2)/2))
-    
-    % Reverse ball azimuth velocity when it hits a paddle
-    game_data.ball_velocity(1) = -game_data.ball_velocity(1);
-    
-end
-
-% Update the ball position
-game_data.ball_position = game_data.ball_position + game_data.ball_velocity;
-
-% Update the computer paddle altitude
-game_data.computer_paddle_position(2) = game_data.computer_paddle_position(2) + ...
-    game_data.computer_paddle_speed*sign(game_data.ball_position(2) - game_data.computer_paddle_position(2));
 
 end
 
