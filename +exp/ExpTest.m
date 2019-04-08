@@ -79,11 +79,19 @@ classdef ExpTest < handle
   % deletion, or visualization)
   methods 
     
-    function obj = ExpTest
+    function obj = ExpTest(expdef)
       % constructor method runs the 'buildUI' method to create the ExpTest
       % panel
-      
       obj.buildUI;
+      if nargin > 0 % if we called 'exp.ExpTest' with an input arg of the exp def file
+        assert(ischar(expdef),...
+          'exp.ExpTest input arg must be in the form of a string');
+        obj.ExpDefPath = which(expdef);
+        obj.ExpDef = fileFunction(obj.ExpDefPath);
+        obj.loadParameters(obj.ParametersProfile);
+        obj.setPTB;
+        obj.SigExpTest = exp.SignalsExpTest(obj); % create fresh 'SignalsExpTest' object
+      end
     end
     
     function paramProfileChanged(obj, src, ~)
@@ -193,13 +201,13 @@ classdef ExpTest < handle
         obj.selectSubject(src, event));      
       obj.SelectExpDef = uicontrol('Parent', obj.ExpTopBox,... 
         'Style', 'pushbutton', 'String', 'Select Signals Exp Def',... 
-        'Callback', @(src,event) obj.getSetExpDef);     
+        'Callback', @(src,event) obj.getSetExpDef(src,event));     
       obj.OptionsButton = uicontrol('Parent', obj.ExpTopBox,... 
         'Style', 'pushbutton', 'String', 'Options',... 
-        'Callback', @(src,event) obj.setOptions);     
+        'Callback', @(src,event) obj.setOptions(src,event));     
       obj.StartButton = uicontrol('Parent', obj.ExpTopBox,... 
         'Style', 'pushbutton', 'String', 'Start',... 
-        'Callback', @(src,event) obj.startStopExp);     
+        'Callback', @(src,event) obj.startStopExp(src,event));     
       uicontrol('Parent', obj.ExpBottomBox, 'Style', 'text', 'String',...
         'Trial Number:');    
       obj.TrialNumCount = uicontrol('Parent', obj.ExpBottomBox,... 
@@ -232,8 +240,8 @@ classdef ExpTest < handle
     
     
     function getSetExpDef(obj, ~, ~)
-    % gets and sets *signals* Exp Def
-    
+      % gets and sets *signals* Exp Def
+      
       if ~isempty(findobj('Type', 'figure', 'Name', 'LivePlot'))
         close('LivePlot')
       end
@@ -244,7 +252,7 @@ classdef ExpTest < handle
       obj.ExpDefPath = fullfile(mpath, mfile);
       obj.loadParameters(obj.ParametersProfile);
       obj.setPTB;
-      obj.SigExpTest = exp.SignalsExpTest(obj); % create fresh 'SignalsExpTest' object   
+      obj.SigExpTest = exp.SignalsExpTest(obj); % create fresh 'SignalsExpTest' object
     end
     
     function loadParameters(obj, profile)
