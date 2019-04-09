@@ -57,8 +57,8 @@ classdef ExpTest < handle
     ExpDef % function handle to currently chosen Signals Exp Def
     ExpDefPath % fullfile path of ExpDef
     OptionsButton % handle to 'Options' push-button
-    LivePlot = 1 % option for live-plotting signals during experiment
-    SaveBlock = 1 % option for saving 'block' file at experiment end
+    LivePlot = 0 % option for live-plotting signals during experiment
+    SaveBlock = 0 % option for saving 'block' file at experiment end
     StartButton % handle to 'Start' push-button
     ParamPanel % 'uix.Panel' object containing the 'ParamGrid'; child of 'MainGrid'
     ParamGrid % 'uix.GridFlex' object containing 'ParamTopBox' and 'ParamBottomBox'; child of 'ParamPanel'

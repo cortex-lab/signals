@@ -29,9 +29,10 @@ arenaCenterY = 0; % altitude in visual degrees
 
 % Ball constants
 ballSz = [5,5]; % [majorAxis minorAxis] in visual degrees
+ballInitAngle = 360*rand; % ball initial angle
+ballVel = 3; % ball velocity in visual degrees per second
 ballInitX = 0; % ball initial x-position
 ballInitY = 0; % ball initial y-position
-ballVel = 3; % ball velocity in visual degrees per second
 ballColour = [1 1 1]; % RGB color vector
 
 % Paddle constants
@@ -112,7 +113,7 @@ ballY = t.Node.Net.origin('ballY');
 
 % initialize ball angle randomly between 0-360 degrees, and when ball comes 
 % into contact with a wall or paddle, change it's direction by 180 degrees
-ballInitAngle = 360 * events.newTrial.map(@rand);
+%ballInitAngle = 360 * events.newTrial.map(@(~) rand);
 events.ballInitAngle = ballInitAngle;
 contact = merge(abs(ballY) > (arenaSz(2)/2),... % wall contact
   ((ballX - playerPaddleX) < (paddleSz(1)/2)) & ((ballY-playerPaddleY) < (paddleSz(2)/2)),... % player paddle contact 
@@ -121,7 +122,10 @@ contact = merge(abs(ballY) > (arenaSz(2)/2),... % wall contact
 contactInstant = contact.then(180);
 
 % 'ballAngle' sets 'ballVelX' and 'bellVelY'
-ballAngle = contactInstant.scan(@minus, ballInitAngle); 
+% use 'merge' with 'ballAngle' to make sure it takes 'ballInitAngle' as
+% it's initial value at experiment start
+ballAngle = merge(contactInstant.scan(@minus, ballInitAngle), ...
+  events.expStart.map(true).then(ballInitAngle));
 events.ballAngle = ballAngle;
 ballVelX = ballVel * -cos(deg2rad(360-ballAngle));
 events.ballVelX = ballVelX;
@@ -134,12 +138,15 @@ ballXToPost = ballVelX * curExpTime + ballInitX;
 events.ballXToPost = ballXToPost;
 ballYToPost = ballVelY * curExpTime + ballInitY;
 events.ballYToPost = ballYToPost;
-cpuPaddleVelToPost = curExpTime * ballVel; %ballVelY * 0.75; % paddle velocity as fraction of ball velocity in visual degrees per second
+cpuPaddleVelToPost = ballVelY * 0.75; % paddle velocity as fraction of ball velocity in visual degrees per second
 
 % use the 't' signal's listeners to listen to when 'ballVelX' and
 % 'ballVelY' update in order to update 'ballX', 'ballY', and 'cpuPaddleVel'
-t.Node.Listeners = [t.Node.Listeners, into(ballXToPost, ballX),... 
-  into(ballYToPost, ballY), into(cpuPaddleVelToPost, cpuPaddleVel)];
+% use 'delay' to ensure infinite recursion doesn't occur
+t.Node.Listeners = [t.Node.Listeners,... 
+  ballXToPost.delay(0.01).into(ballX),... 
+  ballYToPost.delay(0.01).into(ballY),... 
+  cpuPaddleVelToPost.delay(0.01).into(cpuPaddleVel)];
 
 % post initial values into our origin signals *after* the signals dependent
 % on them have been defined
@@ -173,8 +180,8 @@ arena.show = true;
 % create the ball as a 'vis.patch' circle subscriptable signal
 ball = vis.patch(t, 'circle');
 ball.dims = ballSz;
-ball.altitude = ballVel * curExpTime;
-ball.azimuth = ballVel * curExpTime;
+ball.altitude = ballX;
+ball.azimuth = ballY;
 ball.show = true;
 ball.colour = ballColour;
 
