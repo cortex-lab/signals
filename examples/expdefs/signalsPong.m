@@ -1,4 +1,4 @@
-function signalsPong(t, events, params, visStim, inputs, outputs, audio)
+function signalsPongTest(t, events, params, visStim, inputs, outputs, audio)
 % SIGNALSPONG runs a simple version of the classic game, pong, in signals
 %
 % This expdef runs a fairly simple version of pong. The ball's velocity 
@@ -29,8 +29,8 @@ arenaCenterY = 0; % altitude in visual degrees
 
 % Ball constants
 ballSz = [5,5]; % [majorAxis minorAxis] in visual degrees
-ballInitAngle = 360*rand; % ball initial angle
-ballVel = 3; % ball velocity in visual degrees per second
+ballInitAngle = 270; %todo: change back ball initial angle
+ballVel = 5; % ball velocity in visual degrees per second
 ballInitX = 0; % ball initial x-position
 ballInitY = 0; % ball initial y-position
 ballColour = [1 1 1]; % RGB color vector
@@ -41,6 +41,7 @@ cpuPaddleColour = [1 1 1]; % RGB color vector
 cpuPaddleX = -90; % azimuth in visual degrees
 cpuPaddleInitY = 0; % altitude in visual degrees
 cpuPaddleVelInit = 0; % y-velocity in visual degrees per second
+cpuPaddleGain = 0.75; % gain for paddle velocity as fraction of ball velocity
 playerPaddleColour = [1 1 1]; % RGB color vector
 playerPaddleX = 90; % near right edge of screen 
 
@@ -79,13 +80,16 @@ cursorInitialY = events.expStart.map(true).map(@(~) getYPos);
 % As an origin signal, it can and will be posted into (via a listener) when
 % 'ballVelY' updates
 cpuPaddleVel = t.Node.Net.origin('cpuPaddleVel'); % y-velocity of the cpu paddle in visual degrees per second
+events.cpuPaddleVel = cpuPaddleVel;
 % create a signal that will update the y-position of the cpu's paddle
 % based on 'ballVelY'
 cpuPaddleYUpdateVal = cpuPaddleVel * curExpTime + cpuPaddleInitY;
+events.cpuPaddleYUpdateVal = cpuPaddleYUpdateVal;
 % make sure the y-value of the cpu's paddle is within the screen bounds
 cpuPaddleY = cond(cpuPaddleYUpdateVal > arenaSz(2)/2, arenaSz(2)/2,...
   cpuPaddleYUpdateVal < -arenaSz(2)/2, -arenaSz(2)/2,... 
   true, cpuPaddleYUpdateVal);
+events.cpuPaddleY = cpuPaddleY;
 
 % create a signal that will update the y-position of the player's paddle
 % based on cursor
@@ -95,6 +99,7 @@ playerPaddleYUpdateVal =...
 playerPaddleY = cond(playerPaddleYUpdateVal > arenaSz(2)/2, arenaSz(2)/2,...
   playerPaddleYUpdateVal < -arenaSz(2)/2, -arenaSz(2)/2,... 
   true, playerPaddleYUpdateVal);
+events.playerPaddleY = playerPaddleY;
 
 %% Define how ball's interactions update the world:
 
@@ -105,6 +110,8 @@ playerPaddleY = cond(playerPaddleYUpdateVal > arenaSz(2)/2, arenaSz(2)/2,...
 % 'ballAngle' updates
 ballX = t.Node.Net.origin('ballX');
 ballY = t.Node.Net.origin('ballY');
+events.ballX = ballX;
+events.ballY = ballY;
 
 % ball velocity/angle direction references:
 % at 0 degrees all velocity is in positive X, at 90 degrees all velocity is
@@ -114,12 +121,20 @@ ballY = t.Node.Net.origin('ballY');
 % initialize ball angle randomly between 0-360 degrees, and when ball comes 
 % into contact with a wall or paddle, change it's direction by 180 degrees
 %ballInitAngle = 360 * events.newTrial.map(@(~) rand);
-events.ballInitAngle = ballInitAngle;
-contact = merge(abs(ballY) > (arenaSz(2)/2),... % wall contact
-  ((ballX - playerPaddleX) < (paddleSz(1)/2)) & ((ballY-playerPaddleY) < (paddleSz(2)/2)),... % player paddle contact 
-  ((ballX - cpuPaddleX) < (paddleSz(1)/2)) & ((ballY-cpuPaddleY) < (paddleSz(2)/2))... % cpu paddle contact
-  ); 
+wallContact = abs(ballY) > arenaSz(2)/2;
+events.wallContact = wallContact;
+playerPaddleContact = (playerPaddleX-ballX) < (paddleSz(1)/2) &...
+  (playerPaddleY-ballY) < (paddleSz(2)/2);
+events.playerPaddleContact = playerPaddleContact;
+cpuPaddleContact = (ballX-cpuPaddleX) < (paddleSz(1)/2) &...
+  (cpuPaddleY-ballY) < (paddleSz(2)/2);
+events.cpuPaddleContact = cpuPaddleContact;
+contact = merge(wallContact, playerPaddleContact, cpuPaddleContact);
+events.contact = contact;
 contactInstant = contact.then(180);
+events.contactInstant = contactInstant;
+ballXAtContact = ballX.at(contact);
+ballYAtContact = ballY.at(contact);
 
 % 'ballAngle' sets 'ballVelX' and 'bellVelY'
 % use 'merge' with 'ballAngle' to make sure it takes 'ballInitAngle' as
@@ -131,14 +146,18 @@ ballVelX = ballVel * -cos(deg2rad(360-ballAngle));
 events.ballVelX = ballVelX;
 ballVelY = ballVel * sin(deg2rad(ballAngle));
 events.ballVelY = ballVelY;
+%ballXAtContact = contactInstant.then((ballVelX*curExpTime+ballInitX));
+%events.ballXAtContact = ballXAtContact;
+%ballYAtContact = contactInstant.then((ballVelY*curExpTime+ballInitY));
+%events.ballYAtContact = ballYAtContact;
 
 % define mutually dependent signals' interactions:
-% 'ballVelX' and 'ballVelY' set 'ballX', 'ballY' and 'cpuPaddleVel'
-ballXToPost = ballVelX * curExpTime + ballInitX;
+% 'ballVelX' and 'ballVelY' set 'ballX', 'ballY' and 'cpuPaddleY'
+ballXToPost = ballVelX * curExpTime + ballInitX + ballXAtContact;
+ballYToPost = ballVelY * curExpTime + ballInitY + ballYAtContact;
 events.ballXToPost = ballXToPost;
-ballYToPost = ballVelY * curExpTime + ballInitY;
 events.ballYToPost = ballYToPost;
-cpuPaddleVelToPost = ballVelY * 0.75; % paddle velocity as fraction of ball velocity in visual degrees per second
+cpuPaddleVelToPost = ballVelY * cpuPaddleGain; % paddle velocity as fraction of ball velocity in visual degrees per second
 
 % use the 't' signal's listeners to listen to when 'ballVelX' and
 % 'ballVelY' update in order to update 'ballX', 'ballY', and 'cpuPaddleVel'
@@ -180,8 +199,8 @@ arena.show = true;
 % create the ball as a 'vis.patch' circle subscriptable signal
 ball = vis.patch(t, 'circle');
 ball.dims = ballSz;
-ball.altitude = ballX;
-ball.azimuth = ballY;
+ball.altitude = ballY;
+ball.azimuth = ballX;
 ball.show = true;
 ball.colour = ballColour;
 
