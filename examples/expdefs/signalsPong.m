@@ -133,8 +133,10 @@ contact = merge(wallContact, playerPaddleContact, cpuPaddleContact);
 events.contact = contact;
 contactInstant = contact.then(180);
 events.contactInstant = contactInstant;
-ballXAtContact = ballX.at(contact);
-ballYAtContact = ballY.at(contact);
+ballXAtContact = merge(ballX.at(contact),... 
+  events.expStart.map(true).then(0));
+ballYAtContact = merge(ballY.at(contact),...
+  events.expStart.map(true).then(0));
 
 % 'ballAngle' sets 'ballVelX' and 'bellVelY'
 % use 'merge' with 'ballAngle' to make sure it takes 'ballInitAngle' as
@@ -153,8 +155,8 @@ events.ballVelY = ballVelY;
 
 % define mutually dependent signals' interactions:
 % 'ballVelX' and 'ballVelY' set 'ballX', 'ballY' and 'cpuPaddleY'
-ballXToPost = ballVelX * curExpTime + ballInitX + ballXAtContact;
-ballYToPost = ballVelY * curExpTime + ballInitY + ballYAtContact;
+ballXToPost = ballVelX * curExpTime + ballInitX + (2*ballXAtContact);
+ballYToPost = ballVelY * curExpTime + ballInitY + (2*ballYAtContact);
 events.ballXToPost = ballXToPost;
 events.ballYToPost = ballYToPost;
 cpuPaddleVelToPost = ballVelY * cpuPaddleGain; % paddle velocity as fraction of ball velocity in visual degrees per second
