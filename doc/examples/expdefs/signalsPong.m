@@ -1,7 +1,7 @@
-function signalsPongTest(t, events, params, visStim, inputs, outputs, audio)
+function signalsPong(t, events, params, visStim, inputs, outputs, audio)
 % SIGNALSPONG runs a simple version of the classic game, pong, in signals
 %
-% This expdef runs a fairly simple version of pong. The ball's velocity 
+% This expdef runs a fairly simple version of pong. The ball's velocity is 
 % constant, and the ball's trajectory does not depend on where on a paddle
 % or wall it hits, but only on the angle at which it hits.
 %
@@ -133,10 +133,6 @@ contact = merge(wallContact, playerPaddleContact, cpuPaddleContact);
 events.contact = contact;
 contactInstant = contact.then(180);
 events.contactInstant = contactInstant;
-ballXAtContact = merge(ballX.at(contact),... 
-  events.expStart.map(true).then(0));
-ballYAtContact = merge(ballY.at(contact),...
-  events.expStart.map(true).then(0));
 
 % 'ballAngle' sets 'ballVelX' and 'bellVelY'
 % use 'merge' with 'ballAngle' to make sure it takes 'ballInitAngle' as
@@ -148,15 +144,21 @@ ballVelX = ballVel * -cos(deg2rad(360-ballAngle));
 events.ballVelX = ballVelX;
 ballVelY = ballVel * sin(deg2rad(ballAngle));
 events.ballVelY = ballVelY;
-%ballXAtContact = contactInstant.then((ballVelX*curExpTime+ballInitX));
-%events.ballXAtContact = ballXAtContact;
-%ballYAtContact = contactInstant.then((ballVelY*curExpTime+ballInitY));
-%events.ballYAtContact = ballYAtContact;
+
+% get ball position and exp time at contact
+ballXAtContact = merge(ballX.at(contact),... 
+  events.expStart.map(true).then(0));
+ballYAtContact = merge(ballY.at(contact),...
+  events.expStart.map(true).then(0));
+expTimeAtContact = merge(curExpTime.at(contact),...
+  events.expStart.map(true).then(0));
 
 % define mutually dependent signals' interactions:
 % 'ballVelX' and 'ballVelY' set 'ballX', 'ballY' and 'cpuPaddleY'
-ballXToPost = ballVelX * curExpTime + ballInitX + (2*ballXAtContact);
-ballYToPost = ballVelY * curExpTime + ballInitY + (2*ballYAtContact);
+ballXToPost = ballVelX * (curExpTime - expTimeAtContact) + ballXAtContact...
+  + ballInitX;
+ballYToPost = ballVelY * (curExpTime - expTimeAtContact) + ballYAtContact...
+  + ballInitY;
 events.ballXToPost = ballXToPost;
 events.ballYToPost = ballYToPost;
 cpuPaddleVelToPost = ballVelY * cpuPaddleGain; % paddle velocity as fraction of ball velocity in visual degrees per second

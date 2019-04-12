@@ -1,5 +1,5 @@
 % This file contains answers to the questions/assignments in the
-% **Getting_Started_with_Signals** tutorial
+% **GettingStartedWithSignals** tutorial
 
 % 1) 
 % Chris Burgess!

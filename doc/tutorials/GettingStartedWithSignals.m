@@ -25,7 +25,7 @@
 %
 % *Note 4: Along the way, you will encounter questions/assignments for you
 % to solve, marked by closed double dashes (--...--). Answers to these 
-% questions can be found in the <Getting_Started_with_Signals_Answers> file.
+% questions can be found in the <GettingStartedWithSignalsAnswers> file.
 %
 % -- 1) Who created *signals*? --
 

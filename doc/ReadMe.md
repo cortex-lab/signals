@@ -4,6 +4,8 @@ This 'tutorials' folder contains files that are useful for learning how to use *
 
 ## Contents:
 
+### Tutorials folder:
+
 - 'Getting_Started_with_Signals': Those new to *Signals* should start here. This script contains information on how *Signals* works, and how to create signals in a *Signals* network using common MATLAB and *Signals* specific methods.
 
 - 'Getting_Started_with_Signals_Answers': A script containing answers to questions posed in 'Getting_Started_with_Signals'
@@ -12,7 +14,7 @@ This 'tutorials' folder contains files that are useful for learning how to use *
 
 - 'signalsExperimentTutorialAnswers': A script containing answers to questions posed in 'signalsExperimentTutorial'
 
-- 'signalsExamplesScript': This script contains additional information on *Signals'* mechanics. It also contains examples of *Signals-y* things which may not have been covered in the above files, and which an experimenter may be able to incorporate into their Experiment Definitions.
+- 'SignalsPrimer': This script contains additional information on *Signals'* mechanics. It also contains examples of *Signals-y* things which may not have been covered in the above files, and which an experimenter may be able to incorporate into their Experiment Definitions.
 
 ## Instructions on Running Exp Defs from this folder
 

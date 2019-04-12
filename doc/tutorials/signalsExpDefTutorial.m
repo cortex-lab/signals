@@ -1,13 +1,13 @@
-function signalsExperimentTutorial(t, events, params, visStim, inputs, outputs, audio)
-%SIGNALSEXPERIMENTTUTORIAL *Signals* Experiment Definition Tutorial
+function signalsExpDefTutorial(t, events, params, visStim, inputs, outputs, audio)
+%SIGNALSEXPDEFTUTORIAL *Signals* Experiment Definition Tutorial
 %% Todos: 
 % - mention how to repeat incorrect trials?
 %% Notes:
 % Author: Jai Bhagat - j.bhagat@ucl.ac.uk (w/inspiration from Miles Wells
 % and Andy Peters)
 
-% *Note 1: Before beginning, please make sure this entire 'tutorials'
-% folder is added to your MATLAB path. 
+% *Note 1: Before beginning, please make sure that within MATLAB you are
+% currently in the 'tutorials' folder containing this file.
 
 % *Note 2: Code files that are mentioned in this file will be written 
 % within (not including) closed angluar brackets (<...>). Highlight, 
@@ -31,7 +31,7 @@ function signalsExperimentTutorial(t, events, params, visStim, inputs, outputs, 
 % *Note 5: Along the way, you will encounter questions/assignments, some of
 % which you MUST solve in order to create a functional Exp Def. These will 
 % be marked by closed double dashes (--...--). Answers to these questions 
-% can be found in the <signalsExperimentTutorialAnswers> file.
+% can be found in the <signalsExpDefTutorialAnswers> file.
 %
 % -- 1) Who created *signals*? --
 
@@ -39,7 +39,7 @@ function signalsExperimentTutorial(t, events, params, visStim, inputs, outputs, 
 % Welcome to this tutorial on running a *Signals* Experiment Definition
 % (also referred to as an "Exp Def" or "*Signals* Protocol") within Rigbox. 
 % For an introduction to *Signals* before running an experiment, open 
-% <Getting_Started_with_Signals>. In this tutorial, we will go step-by-step
+% <GettingStartedWithSignals>. In this tutorial, we will go step-by-step
 % to create a version of the "Burgess Steering Wheel Task" the CortexLab 
 % uses to probe rodent behaviour and decision-making. (See 
 % 1) https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5603732/pdf/main.pdf and
@@ -480,7 +480,7 @@ function signalsExperimentTutorial(t, events, params, visStim, inputs, outputs, 
 % (instead of 1) because it is a dependent signal (on 'params.x'), and all 
 % dependent signals initialize with empty values - they only update after
 % the signal they depend on updates. (See Section 'Part 2' in
-% <Getting_Started_With_Signals> if this is unclear).
+% <GettingStartedWithSignals> if this is unclear).
 
 % 1) The inputs will be the same as in the previous section
 

@@ -87,6 +87,7 @@ classdef ExpTest < handle
         assert(ischar(expdef),...
           'exp.ExpTest input arg must be in the form of a string');
         obj.ExpDefPath = which(expdef);
+        if isempty(obj.ExpDefPath), obj.delete(); error('"%s" not found.', expdef); end
         obj.ExpDef = fileFunction(obj.ExpDefPath);
         obj.loadParameters(obj.ParametersProfile);
         obj.setPTB;
@@ -157,8 +158,11 @@ classdef ExpTest < handle
       % callback for when this object (and 'PanelH') have been deleted:
       % makes sure to delete 'ScreenH' PTB Screen and 'LivePlot' figure
       
+      if ~isempty(obj.PanelH)
+        delete(obj.PanelH)
+      end
       if ~isempty(findobj('Type', 'figure', 'Name', 'LivePlot'))
-        close('LivePlot')
+        delete('LivePlot')
       end
       if isequal(obj.ScreenH, Screen('Windows'))
         Screen('Close', obj.ScreenH)
