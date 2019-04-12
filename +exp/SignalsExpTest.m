@@ -118,7 +118,7 @@ classdef SignalsExpTest < handle
       obj.CondPars.post(condStruct);
       
       % create a listener for user changing parameters in test panel GUI
-      paramChangeL = addlistener(obj.ETest.ParamEditor,... 
+      addlistener(obj.ETest.ParamEditor,... 
         'Changed', @(src,event) obj.userChangedParam);
       
       % get access to PTB Screen and set viewing model (to emulate the 3
@@ -126,15 +126,24 @@ classdef SignalsExpTest < handle
       obj.ScreenH = obj.ETest.ScreenH;
       obj.Occ = vis.init(obj.ScreenH);
       
-      screenDimsCm = [20 25]; %[width_cm height_cm of real experiment screen]
-      pxW = 960/3; % 3 screens % 1280
-      pxH = 400; % 600
-      screens(1) = vis.screen([0 0 9.5], -90, screenDimsCm, [0 0 pxW pxH]); % left screen
-      screens(2) = vis.screen([0 0 10],  0 ,... 
-        screenDimsCm, [pxW 0 2*pxW pxH]); % ahead screen
-      screens(3) = vis.screen([0 0 9.5],  90,... 
-        screenDimsCm, [2*pxW  0 3*pxW pxH]); % right screen
-      obj.Occ.screens = screens;
+      if obj.ETest.ScreenView % if this flag has been set to view PTB window as single-screen
+        center = [0 0 0];
+        viewingAngle = 0;
+        dimsCM = [20 20];
+        pxBounds = [0 0 400 400];
+        screen = vis.screen(center, viewingAngle, dimsCM, pxBounds);
+      else
+        screenDimsCm = [20 25]; %[width_cm height_cm of real experiment screen]
+        pxW = 960/3; % 3 screens % 1280
+        pxH = 400; % 600
+        screen(1) = vis.screen([0 0 9.5], -90, screenDimsCm, [0 0 pxW pxH]); % left screen
+        screen(2) = vis.screen([0 0 10],  0 ,...
+          screenDimsCm, [pxW 0 2*pxW pxH]); % ahead screen
+        screen(3) = vis.screen([0 0 9.5],  90,...
+          screenDimsCm, [2*pxW  0 3*pxW pxH]); % right screen
+      end
+      
+      obj.Occ.screens = screen;
     end
     
     function run(obj)

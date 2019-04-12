@@ -17,6 +17,8 @@ classdef ExpTest < handle
 % enable when running the Exp Def. Currently, these are:
 %   a) Live-Plotting of signals
 %   b) Saving a 'block' file
+%   c) Viewing the PTB Window as a single screen (by default it's set as
+%   divided into 3 screens, to mimic the Burgess Steering Wheel Task)
 % 6) Click the 'Start' button to run the Exp Def. This button will turn
 % into a 'Stop' button after the experiment starts running - click it again
 % to end the experiment (alternatively, press the 'q' keyboard key to
@@ -59,6 +61,7 @@ classdef ExpTest < handle
     OptionsButton % handle to 'Options' push-button
     LivePlot = 0 % option for live-plotting signals during experiment
     SaveBlock = 0 % option for saving 'block' file at experiment end
+    ScreenView = 0 % option for viewing PTB window as a single screen
     StartButton % handle to 'Start' push-button
     ParamPanel % 'uix.Panel' object containing the 'ParamGrid'; child of 'MainGrid'
     ParamGrid % 'uix.GridFlex' object containing 'ParamTopBox' and 'ParamBottomBox'; child of 'ParamPanel'
@@ -115,6 +118,9 @@ classdef ExpTest < handle
         'String', 'Plot Signals?', 'Value', obj.LivePlot);
       saveBlockCheck = uicontrol('Parent', dCheckBox, 'Style', 'checkbox',... 
         'String', 'Save Block file?', 'Value', obj.SaveBlock);
+      screenViewCheck = uicontrol('Parent', dCheckBox, 'Style', 'checkbox',... 
+        'String', 'View PTB Window as Single Screen?',... 
+        'Value', obj.ScreenView);
       CloseHBox = uix.HBox('Parent', dCheckBox, 'Padding', 10);
       uicontrol('Parent', CloseHBox, 'String', 'Save and Close',... 
         'Callback', @(~,~) helper);
@@ -124,6 +130,7 @@ classdef ExpTest < handle
       
         obj.LivePlot = livePlotCheck.Value;
         obj.SaveBlock = saveBlockCheck.Value;
+        obj.ScreenView = screenViewCheck.Value;
         delete(dh)
       end
   
