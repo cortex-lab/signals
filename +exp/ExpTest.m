@@ -28,6 +28,8 @@ classdef ExpTest < handle
 % *Note: While the experiment is running, the position of the mouse
 % cursor will be set to emulate the wheel. Press the 'c' keyboard key
 % while experiment is running to disable/enable this feature.
+%
+% todo: check dev branch, and optionally pull latest code
   
 %% properties
   
@@ -61,7 +63,7 @@ classdef ExpTest < handle
     OptionsButton % handle to 'Options' push-button
     LivePlot = 0 % option for live-plotting signals during experiment
     SaveBlock = 0 % option for saving 'block' file at experiment end
-    ScreenView = 0 % option for viewing PTB window as a single screen
+    SingleScreen = 0 % option for viewing PTB window as a single screen
     StartButton % handle to 'Start' push-button
     ParamPanel % 'uix.Panel' object containing the 'ParamGrid'; child of 'MainGrid'
     ParamGrid % 'uix.GridFlex' object containing 'ParamTopBox' and 'ParamBottomBox'; child of 'ParamPanel'
@@ -96,6 +98,7 @@ classdef ExpTest < handle
         obj.setPTB;
         obj.SigExpTest = exp.SignalsExpTest(obj); % create fresh 'SignalsExpTest' object
       end
+      obj.checkForUpdate;
     end
     
     function paramProfileChanged(obj, src, ~)
@@ -118,9 +121,9 @@ classdef ExpTest < handle
         'String', 'Plot Signals?', 'Value', obj.LivePlot);
       saveBlockCheck = uicontrol('Parent', dCheckBox, 'Style', 'checkbox',... 
         'String', 'Save Block file?', 'Value', obj.SaveBlock);
-      screenViewCheck = uicontrol('Parent', dCheckBox, 'Style', 'checkbox',... 
+      SingleScreenCheck = uicontrol('Parent', dCheckBox, 'Style', 'checkbox',... 
         'String', 'View PTB Window as Single Screen?',... 
-        'Value', obj.ScreenView);
+        'Value', obj.SingleScreen);
       CloseHBox = uix.HBox('Parent', dCheckBox, 'Padding', 10);
       uicontrol('Parent', CloseHBox, 'String', 'Save and Close',... 
         'Callback', @(~,~) helper);
@@ -130,7 +133,7 @@ classdef ExpTest < handle
       
         obj.LivePlot = livePlotCheck.Value;
         obj.SaveBlock = saveBlockCheck.Value;
-        obj.ScreenView = screenViewCheck.Value;
+        obj.SingleScreen = SingleScreenCheck.Value;
         delete(dh)
       end
   
@@ -278,12 +281,12 @@ classdef ExpTest < handle
           fieldnames(dat.loadParamProfiles('custom'))];
         obj.ParametersList = bui.Selector(obj.ParamTopBox, sets);
         obj.ParametersList.addlistener('SelectionChanged', @(src,event)...
-        obj.paramProfileChanged(src, event));
+          obj.paramProfileChanged(src, event));
         uix.Empty('Parent', obj.ParamTopBox);
       end
       
       if ~isempty(obj.ParamEditor) % delete existing parameters control
-        delete(obj.ParamEditor);
+        clear(obj.ParamEditor);
       end
       
       % switch-case for how to load parameters for either: 1) default Exp
@@ -328,20 +331,23 @@ classdef ExpTest < handle
       end
       
       obj.Parameters.Struct = paramStruct; % set parameters to ExpTest object
-      
-      if ~isempty(paramStruct) % Now parameters are loaded, pass to ParamEditor for display, etc.
-        obj.ParamEditor = eui.ParamEditor(obj.Parameters,... 
-          obj.ParamBottomBox);
+      if isempty(paramStruct); return; end
+      % Now parameters are loaded, pass to ParamEditor for display, etc.
+      if isempty(obj.ParamEditor)
+        obj.ParamEditor = eui.ParamEditor(obj.Parameters, obj.ParamBottomBox); % Build parameter list in Global panel by calling eui.ParamEditor
+      else
+        obj.ParamEditor.buildUI(obj.Parameters);
       end
+      obj.ParamEditor.addlistener('Changed', @(src,event) obj.paramProfileChanged(src, event));
       
       % construct an Exp Ref
-          if isempty(obj.Subject) % construct a default expRef just so we can run experiment
-            obj.Parameters.Struct.expRef = dat.constructExpRef('N/A',... 
-              now, 1);
-          else
-            obj.Parameters.Struct.expRef = dat.constructExpRef(obj.Subject,... 
-              now, 1);
-          end
+      if isempty(obj.Subject) % construct a default expRef just so we can run experiment
+        obj.Parameters.Struct.expRef = dat.constructExpRef('N/A',... 
+          now, 1);
+      else
+        obj.Parameters.Struct.expRef = dat.constructExpRef(obj.Subject,... 
+          now, 1);
+      end
       
       % prettify 'ParamGrid'
       obj.ParamGrid.set('Heights', [-1 -6]);
@@ -366,7 +372,65 @@ classdef ExpTest < handle
       end
     end
     
-    
+  end
+  
+  methods (Static = true)
+    function checkForUpdate(~)
+      
+      % get paths to check for updates
+      curDir = pwd;
+      rigboxPath = fileparts(which('addRigboxPaths'));
+      signalsPath = fileparts(which('addSignalsPaths'));
+      paths = {rigboxPath; signalsPath};
+      
+      % Get the path to the Git exe
+      gitexepath = getOr(dat.paths, 'gitExe');
+      if isempty(gitexepath)
+        [status, gitexepath] = system('where git');
+        if status == 1
+          error(['Could not find the git .exe location. Please find and ',...
+            'add the location to the "dat.paths" file. For example, like so:',...
+            ' p.gitExe = ''C:\Program Files\Git\cmd\git.exe''']);
+        end
+      end
+      gitexepath = ['"', strtrim(gitexepath), '"'];
+      
+      % check for updates for each path
+      for i = 1:length(paths)
+        cd(paths{i});
+        
+        % git fetch
+        system([gitexepath, ' fetch']);
+        
+        % git status
+        [~, status] = system([gitexepath, ' status']);
+        
+        % if remote branch is ahead, ask to update
+        if contains(status, 'up to date')
+          continue;
+        else
+          [~, curBranch] = ...
+            system([gitexepath, ' rev-parse --abbrev-ref HEAD'], '-echo');
+          curBranch = strtrim(curBranch);
+          q = ['Your ' paths{i} ' ' '"' curBranch '"',... 
+            ' is currently behind the remote branch, would you like to '...
+            'update?'];
+          t = 'Update repository?';
+          qAns = questdlg(q,t);
+          if strcmpi(qAns, 'yes') % then stash and pull
+            cmdstrStash = [gitexepath,...
+              ' stash push -m "stash WIP for git update by ExpTestPanel"'];
+            cmdstrPull = [gitexepath, ' pull'];
+            system(cmdstrStash, '-echo');
+            system(cmdstrPull, '-echo');
+          else
+            continue
+          end
+        end
+      end
+      cd(curDir);
+    end
+ 
     
   end
 

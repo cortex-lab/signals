@@ -126,7 +126,7 @@ classdef SignalsExpTest < handle
       obj.ScreenH = obj.ETest.ScreenH;
       obj.Occ = vis.init(obj.ScreenH);
       
-      if obj.ETest.ScreenView % if this flag has been set to view PTB window as single-screen
+      if obj.ETest.SingleScreen % if this flag has been set to view PTB window as single-screen
         center = [0 0 0];
         viewingAngle = 0;
         dimsCM = [20 20];
