@@ -1,7 +1,7 @@
 function signalsExpDefTutorial(t, events, params, visStim, inputs, outputs, audio)
 %SIGNALSEXPDEFTUTORIAL *Signals* Experiment Definition Tutorial
-%% Todos: 
-% - mention how to repeat incorrect trials?
+
+% todo: mention repeating incorrect trials?
 %% Notes:
 % Author: Jai Bhagat - j.bhagat@ucl.ac.uk (w/inspiration from Miles Wells
 % and Andy Peters)
@@ -31,7 +31,7 @@ function signalsExpDefTutorial(t, events, params, visStim, inputs, outputs, audi
 % *Note 5: Along the way, you will encounter questions/assignments, some of
 % which you MUST solve in order to create a functional Exp Def. These will 
 % be marked by closed double dashes (--...--). Answers to these questions 
-% can be found in the <signalsExpDefTutorialAnswers> file.
+% can be found in the 'Answers' section at the bottom of this file.
 %
 % -- 1) Who created *signals*? --
 
@@ -616,6 +616,56 @@ end
 % allows for is well worth the cost (and keep in mind that less than half
 % of the all signals-specific functions defined in <sig.Signal> were used
 % in this tutorial). Please feel free to contact the author with any
-% questions regarding this tutorial, or *Signals* in general! 
+% questions regarding this tutorial, or *Signals* in general!
+
+%% Answers:
+
+% % 1) 
+% % Chris Burgess!
+% 
+% % 2) 
+% totalReward = reward.scan(@plus, 0); % signal to track total reward
+% 
+% % 3)
+% % This wouldn't work because this assignment would only evaluate
+% % 'randi(2)', once, at the start of the experiment, and so 'defaultSide'
+% % would have the same value for each trial in the experiment
+% 
+% % 4)
+% incorrectMove = iff(defaultSide ==1, azimuthPos <= -55,...
+%   azimuthPos >= 55); % signal for incorrect move, (more than 10 visual degrees in wrong direction) 
+% 
+% % 5)
+% % When using either the '|' or '&' logical operators on signals, the
+% % resulting signal will only update when all of the signals involved in the
+% % logical operation update. In this case, we want only one of
+% % 'correctMove', 'trialTimeout', or 'incorrectMove' to update each trial,
+% % so 'response' would never take a value.
+% 
+% % 6) Both of these cases would cause infinite recursion because they will
+% % result in 'endTrial' taking and keeping a value, so 'endTrial' will
+% % update, which will cause 'newTrial' to update, which will cause
+% % 'endTrial' to update, etc... What we really want is an "instantaneous"
+% % update of 'endTrial', which is why we use the 'setTrigger' method
+% 
+% % 7)
+% audio.default = incorrectInstant.then(0.1*incorrectTone);
+% audio.default = timeoutInstant.then(0.1*incorrectTone); % we'll use the same 'incorrectTone' for trial timeouts
+% 
+% % 8)
+% defaultOriLeft = newTrial.map(@(x) randi([0 90]));
+% defaultOriRight = newTrial.map(@(x) randi([0 90]));
+% 
+% % 9)
+% leftVisStim = vis.grating(t);
+% leftVisStim.azimuth = deltaWheel + azimuthDefault;
+% leftVisStim.orientation = defaultOriLeft; % our signal with the randomly chosen orientation for the left stimulus
+% leftVisStim.show = interactiveStart.to(endTrial);
+% 
+% rightVisStim = vis.grating(t);
+% rightVisStim.azimuth = deltaWheel + -azimuthDefault;
+% rightVisStim.orientation = defaultOriRight; % our signal with the randomly chosen orientation for the right stimulus
+% rightVisStim.show = interactiveStart.to(endTrial);
+
 
 end

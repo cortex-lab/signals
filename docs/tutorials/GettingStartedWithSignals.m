@@ -1,14 +1,12 @@
 %GETTINGSTARTEDWITHSIGNALS A script for learning how *Signals* works
 
-%% Todos:
-% - add to section 'Part 4'
-
+% todo: add to Part 4
 %% Notes:
 % Author: Jai Bhagat - j.bhagat@ucl.ac.uk (w/inspiration from Miles Wells
 % and Andy Peters)
 %
-% *Note 1: Before beginning, please make sure this entire 'tutorials'
-% folder is added to your MATLAB path. 
+% *Note 1: Before beginning, please make sure that within MATLAB you are
+% currently in the 'tutorials' folder containing this file.
 % 
 % *Note 2: Code files that are mentioned in this file will be written 
 % within (not including) closed angluar brackets (<...>). Highlight, 
@@ -25,7 +23,8 @@
 %
 % *Note 4: Along the way, you will encounter questions/assignments for you
 % to solve, marked by closed double dashes (--...--). Answers to these 
-% questions can be found in the <GettingStartedWithSignalsAnswers> file.
+% questions can be found in the 'Answers' section at the bottom of this 
+% file.
 %
 % -- 1) Who created *signals*? --
 
@@ -45,12 +44,18 @@
 % 2) dependent signals (<sig.Signal> / <sig.node.Signal>), which are 
 % created from other signals (first-order dependent signals are created 
 % from origin signals).
+% *Note: when actually creating a MATLAB function that will run a *signals*
+% experiment (referred to as a *signals* "experiment definition", or "exp 
+% def"), you will only ever create dependent signals - all origin signals 
+% will be created for you by the *signals* framework. After completing this
+% tutorial, see the follow-up tutorial, <signalsExpDefTutorial>, for more 
+% info on creating an exp def.
 %
-% In this tutorial you will get started with *signals*. You will 1) create 
-% signals within a *signals* network; 2) use common arithmetic and
-% signals-specific functions to manipulate signals; 3) live plot signals to 
-% visualise their changes over time; 4) create simple visual stimuli using
-% signals. 
+% In this tutorial you will learn the core features of *signals*. You will 
+% 1) create signals within a *signals* network; 2) use common arithmetic and
+% and signals-specific functions to manipulate signals; 3) live plot 
+% signals to visualise their changes over time; 4) create simple visual
+% stimuli using signals. 
 %
 
 %% Part 1: Create signals in a *signals* network
@@ -308,7 +313,50 @@ net = sig.Net;
 t = net.origin('t');
 gaborVis = vis.grating(t);
 
+%% Answers:
 
+% % 1) 
+% % Chris Burgess!
+% 
+% % 2) 
+% os4 = net.origin('os4');
+% os4Out = os4.output;
+% os4.post('Hello, *signals*');
+% 
+% % 3)
+% dsStr = horzcat(os4, ', I am a signal');
+% dsStrOut = dsStr.output;
+% os4.post('Hello, *signals*');
+% 
+% % 4a) 
+% expStart = net.origin('expStart');
+% newTrial = net.origin('newTrial');
+% 
+% % 4b)
+% endTrial = newTrial.delay(3)+1;
+% 
+% % 4c)
+% trialNum = newTrial.scan(@plus, 0);
+% trialNumFunc = trialNum.map(@(x) x.^3-1);
+% % in this case, you could also create 'trialNumFunc' without using 'map':
+% % trialNumFunc = trialNum.^3-1;
+% 
+% % 4d)
+% trialRunning = to(newTrial, endTrial);
+% trialStr = net.origin('trialStr'); trialStr.post('Trial is Running');
+% dispTrialStr = trialStr.at(trialRunning);
+% % in this case, we could also combine multiple method calls togethers, and
+% % create 'dispTrialStr' without needing to explicitly create 'trialRunning':
+% % dispTrialStr - trialStr.at.to(newTrial, endTrial);
+% 
+% % 4e)
+% expStartOut = expStart.output;
+% newTrialOut = newTrial.output;
+% endTrialOut = endTrial.output;
+% trialNumOut = trialNum.output;
+% trialNumFuncOut = trialNumFunc.output;
+% trialRunningOut = trialRunning.output;
+% dispTrialStrOut = dispTrialStr.output;
 
 
 
