@@ -2,7 +2,7 @@
 
 % preconditions
 net = sig.Net;
-load([fileparts(which('addSignalsPaths')) '\tests\fixtures\data\gauss.mat'], 'gauss');
+load(fullfile(fileparts(which('addSignalsPaths')), '\tests\fixtures\data\gauss.mat'), 'gauss');
 
 %% Test one: standard inputs
 pos = [10 5];
