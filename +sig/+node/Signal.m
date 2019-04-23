@@ -356,8 +356,8 @@ classdef Signal < sig.Signal & handle
     
     function h = onValue(this, fun, noHFlag)
       % Creates a listener for a signal when the signal takes a value. 
-      % If 'noHFlag' is given a truthy value, the listener can listen
-      % outside the scope in which it was created.
+      % If 'noHFlag' evaluates to true, the listener can listen outside
+      % the scope in which it was created.
       %
       % Inputs:
       %   'fun': the function to be executed when the signal updates
