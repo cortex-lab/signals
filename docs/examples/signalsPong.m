@@ -25,7 +25,7 @@ function signalsPong(t, events, p, visStim, inputs, outputs, audio)
 
 % The Signals exp def trial structure is set-up so that a trial ends when a
 % score occurs, and the experiment ends when the player or cpu reaches
-% 'scoreToWin'
+% 'targetScore'
 
 % Define world constants:
 
@@ -67,7 +67,7 @@ cpuPaddleCoverage = 0.7; % coverage of cpu paddle for ball, as a fraction of bal
 cursorGain = 0.1; % set gain for cursor
 
 % Game constants
-scoreToWin = p.scoreToWin;
+targetScore = p.targetScore;
 initPlayerScore = 0;
 initCpuScore = 0;
 
@@ -247,7 +247,7 @@ anyScored = playerScore.to(~playerScore) | cpuScore.to(~cpuScore);
 events.endTrial = anyScored.then(1);
 
 % define game end (when player or cpu score reaches target score)
-endGame = merge((playerScore == scoreToWin), (cpuScore == scoreToWin));
+endGame = merge((playerScore == targetScore), (cpuScore == targetScore));
 events.expStop = endGame.then(1);
 
 % create listeners to display the score in the command window on a score 
@@ -261,20 +261,6 @@ events.expStop.onValue(@(~)...
 
 %% Define the visual elements and the experiment parameters
 
-% create the paddles as 'vis.patch' rectangle subscriptable signals
-playerPaddle = vis.patch(t, 'rectangle');
-playerPaddle.dims = playerPaddleSz;
-playerPaddle.altitude = playerPaddleY;
-playerPaddle.azimuth = playerPaddleX;
-playerPaddle.show = true;
-playerPaddle.colour = playerPaddleColor;
-
-cpuPaddle = vis.patch(t, 'rectangle');
-cpuPaddle.dims = cpuPaddleSz;
-cpuPaddle.altitude = cpuPaddleY;
-cpuPaddle.azimuth = cpuPaddleX;
-cpuPaddle.show = true;
-cpuPaddle.colour = cpuPaddleColor;
 
 % create arena as a 'vis.patch' rectangle subscriptable signal
 arena = vis.patch(t, 'rectangle');
@@ -292,16 +278,32 @@ ball.azimuth = ballX;
 ball.show = showBallDelay.to(events.endTrial);
 ball.colour = ballColor;
 
+% create the paddles as 'vis.patch' rectangle subscriptable signals
+playerPaddle = vis.patch(t, 'rectangle');
+playerPaddle.dims = playerPaddleSz;
+playerPaddle.altitude = playerPaddleY;
+playerPaddle.azimuth = playerPaddleX;
+playerPaddle.show = true;
+playerPaddle.colour = playerPaddleColor;
+
+cpuPaddle = vis.patch(t, 'rectangle');
+cpuPaddle.dims = cpuPaddleSz;
+cpuPaddle.altitude = cpuPaddleY;
+cpuPaddle.azimuth = cpuPaddleX;
+cpuPaddle.show = true;
+cpuPaddle.colour = cpuPaddleColor;
+
 % assign the arena, paddles, and ball to the 'visStim' subscriptable signal
 % handler
 visStim.arena = arena;
+visStim.ball = ball;
 visStim.playerPaddle = playerPaddle;
 visStim.cpuPaddle = cpuPaddle;
-visStim.ball = ball;
+
 
 % parameters for experimenter in GUI
 try
-  p.scoreToWin = 5;
+  p.targetScore = 5;
 catch
 end
 
