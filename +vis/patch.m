@@ -41,9 +41,9 @@ elem = t.Node.Net.subscriptableOrigin('patch');
 % Set some defaults for the stimulus
 elem.azimuth = 0;
 elem.altitude = 0;
-elem.dims = [10 10];
+elem.dims = [10 10]';
 elem.orientation = 0;
-elem.colour = [1 1 1];
+elem.colour = [1 1 1]';
 elem.show = false;
 % Map the visual element signal through the below function 'makeLayer' and
 % assign it to the layers field.  When any of the above parameters takes a
@@ -78,7 +78,7 @@ elem.layers = elem.map(@makeLayer).flattenStruct();
     layer.blending = 'source';
     % Set the layer colour according to the element's colour parameter,
     % adding a fourth, alpha, value
-    layer.maxColour = [newelem.colour 1];
+    layer.maxColour = [newelem.colour(:); 1];
     % Convert the texture image to the correct format: a column vector of
     % RGBA values between 0 and 255, saving the image size in the rabaSize
     % field

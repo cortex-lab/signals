@@ -48,7 +48,8 @@ classdef SignalsExpTest < handle
       'timestamp', cell(500,1))
     NumSignalUpdates = 0
     GlobalPars % global parameters in GUI
-    CondPars % conditional parameters in GUI   
+    CondPars % conditional parameters in GUI
+    Messages % TidyHandle objects to display in the 'exp.ExpTest' Logging Display when the signal they listen to updates (for 'Outputs')
   end
   
 %% methods (Exposed)
@@ -113,6 +114,16 @@ classdef SignalsExpTest < handle
         ];
       end
       
+      % get all signals that belong to 'obj.Outputs' registry, and map them
+      % to 'obj.ETest.log'
+      allOuts = fieldnames(obj.Outputs);
+      for i = 1:length(allOuts)
+        curName = allOuts{i};
+        curSig = obj.Outputs.(curName);
+        obj.Messages = [obj.Messages ...
+          curSig.onValue(@(message) obj.ETest.log(message))];
+      end
+      
       obj.ParamsLog = obj.Params.log();
       obj.GlobalPars.post(globalStruct);
       obj.CondPars.post(condStruct);
@@ -126,7 +137,7 @@ classdef SignalsExpTest < handle
       obj.ScreenH = obj.ETest.ScreenH;
       obj.Occ = vis.init(obj.ScreenH);
       
-      if obj.ETest.SingleScreen % if this flag has been set to view PTB window as single-screen
+      if obj.ETest.SingleScreen % view PTB window as single-screen
         center = [0 0 0];
         viewingAngle = 0;
         dimsCM = [20 20];

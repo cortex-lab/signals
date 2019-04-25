@@ -1,6 +1,6 @@
 classdef ExpTest < handle
 %% Description
-%EXPTEST Creates an experiment test panel for testing *Signals* Exp Defs on a personal PC
+%EXPTEST Creates a GUI for testing *Signals* Exp Defs on a personal PC
 %
 % See also: EXP.SIGNALSEXPTEST, EUI.MCONTROL
 %% Usage:
@@ -29,7 +29,6 @@ classdef ExpTest < handle
 % cursor will be set to emulate the wheel. Press the 'c' keyboard key
 % while experiment is running to disable/enable this feature.
 %
-% todo: check dev branch, and optionally pull latest code
   
 %% properties
   
@@ -37,6 +36,7 @@ classdef ExpTest < handle
   properties
     ScreenH % handle to PTB Screen which displays visual stimuli
     LivePlotFig % handle to figure for live-plotting signals
+    LoggingDisplay % window for showing log output
   end 
   
 %% properties (SetAccess = ?exp.SignalsExpTest)
@@ -78,7 +78,7 @@ classdef ExpTest < handle
     QuitKey = KbName('q') % Keyboard key for quitting experiment and closing 'ScreenH'
   end
   
-%% methods (Exposed)
+%% methods
 
   % can be called via Test Panel GUI, or command line (for instantiation, 
   % deletion, or visualization)
@@ -164,6 +164,14 @@ classdef ExpTest < handle
       
     end
     
+    function log(obj, message)
+      % displays experiment output in 'LoggingDisplay'
+      timestamp = datestr(now, 'dd-mm-yyyy HH:MM:SS');
+      toDisplay = sprintf('[%s] %s', timestamp, message);
+      curDisplay = get(obj.LoggingDisplay, 'String');
+      set(obj.LoggingDisplay, 'String', [curDisplay; toDisplay]);
+    end
+    
     function delete(obj, ~, ~)
       % callback for when this object (and 'PanelH') have been deleted:
       % makes sure to delete 'ScreenH' PTB Screen and 'LivePlot' figure
@@ -208,7 +216,7 @@ classdef ExpTest < handle
         'Padding', 5);
       obj.ExpBottomBox = uix.HBox('Parent', obj.ExpGrid, 'Spacing', 5,...
         'Padding', 5);      
-      % get animal subject list from server via 'dat.listSubjects'
+      % get subject list from server via 'dat.listSubjects'
       obj.SubjectList = bui.Selector(obj.ExpTopBox, [{'Select Subject...'};... 
         dat.listSubjects]);
       obj.SubjectList.addlistener('SelectionChanged', @(src,event)...
@@ -239,7 +247,10 @@ classdef ExpTest < handle
         'Padding', 5);     
       obj.ParamBottomBox = uix.VBox('Parent', obj.ParamGrid, 'Spacing', 5,...
         'Padding', 5);     
-      obj.MainGrid.set('Heights', [-2 -9]);
+      obj.LoggingDisplay = uicontrol('Parent', obj.MainGrid,... 
+        'Style', 'listbox', 'Enable', 'inactive', 'String', {},... 
+        'Tag', 'Logging Display');
+      obj.MainGrid.set('Heights', [-2 -9 -3]);
     end
     
     function selectSubject(obj, src, ~)
@@ -251,7 +262,6 @@ classdef ExpTest < handle
         obj.Subject = [];
       end
     end
-    
     
     function getSetExpDef(obj, ~, ~)
       % gets and sets *signals* Exp Def
@@ -273,7 +283,9 @@ classdef ExpTest < handle
     % loads parameters for one of three cases: 
     % 1) the chosen Exp Def, 2) the last set for a chosen subject (if a 
     % subject was selected), or 3) a saved parameter set on the server
-    % 'profile' is the parameters' profile (i.e. a parameter set) 
+    % 
+    % Inputs:
+    %   'profile': the parameters' profile (i.e. a parameter set) 
     
       if isempty(obj.ParametersList) % initialize parameters list
         % concatenate standard parameter sets to server saved parameter sets

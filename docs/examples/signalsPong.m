@@ -44,7 +44,7 @@ ballInitAngle = randi([0 360]); % initial angle of ball
 ballVel = 50 * updateTime; % ball velocity in visual degrees per second
 ballInitX = 0; % ball initial x-position
 ballInitY = 0; % ball initial y-position
-ballColor = [1 1 1]; % RGB color vector
+ballColor = p.ballColor; % RGB color vector
 showBallDelay = events.newTrial.delay(0.3); % time (based on trial epoch) when ball is visible
 
 % *note on ball velocity/angle direction references:
@@ -56,15 +56,15 @@ showBallDelay = events.newTrial.delay(0.3); % time (based on trial epoch) when b
 % Paddle constants
 playerPaddleSz = [5 20]; % [w h] in visual degrees
 cpuPaddleSz = [5 20]; % [w h] in visual degrees
-playerPaddleColor = [1 1 1]; % RGB color vector
-cpuPaddleColor = [1 1 1]; % RGB color vector
+playerPaddleColor = p.playerPaddleColor; % RGB color vector
+cpuPaddleColor = p.cpuPaddleColor; % RGB color vector
 playerPaddleX = arenaSz(1)/2 - cpuPaddleSz(1); % azimuth in visual degrees
 cpuPaddleX = -arenaSz(1)/2 + cpuPaddleSz(1); % azimuth in visual degrees 
 cpuPaddleInitY = 0; % altitude in visual degrees
 cpuPaddleCoverage = 0.7; % coverage of cpu paddle for ball, as a fraction of ball y-position
 
 % Mouse cursor constants
-cursorGain = 0.1; % set gain for cursor
+cursorGain = 0.2; % set gain for cursor
 
 % Game constants
 targetScore = p.targetScore;
@@ -99,11 +99,13 @@ cursorInitialY = events.expStart.map(true).map(@(~) getYPos);
 % based on cursor
 playerPaddleYUpdateVal =... 
   (wheel.map(@(~) getYPos) - cursorInitialY) * cursorGain;
-% make sure the y-value of the player's paddle is within the screen bounds,
-% and only update every 'tUpdate' secs
-playerPaddleY = at( cond(playerPaddleYUpdateVal > arenaSz(2)/2, arenaSz(2)/2,...
+% make sure the y-value of the player's paddle is within the screen bounds
+playerPaddleBounds =... 
+  cond(playerPaddleYUpdateVal > arenaSz(2)/2, arenaSz(2)/2,...
   playerPaddleYUpdateVal < -arenaSz(2)/2, -arenaSz(2)/2,... 
-  true, playerPaddleYUpdateVal), tUpdate);
+  true, playerPaddleYUpdateVal);
+% paddle y updates every 'tUpdate' secs
+playerPaddleY = playerPaddleBounds.at(tUpdate);
 
 % Create a struct, 'gameDataInit', holding the initial world state
 gameDataInit = struct;
@@ -238,26 +240,45 @@ gameData = playerPaddleY.scan(@updateGame, gameDataInit).subscriptable;
 % 'gameData'
 ballX = gameData.ballX;
 ballY = gameData.ballY;
-playerScore = gameData.playerScore;
-cpuScore = gameData.cpuScore;
+playerScore = gameData.playerScore.skipRepeats();
+cpuScore = gameData.cpuScore.skipRepeats();
 cpuPaddleY = gameData.cpuPaddleY;
 
 % define trial end (when a score occurs)
-anyScored = playerScore.to(~playerScore) | cpuScore.to(~cpuScore);
+anyScored = playerScore | cpuScore;
 events.endTrial = anyScored.then(1);
 
 % define game end (when player or cpu score reaches target score)
-endGame = merge((playerScore == targetScore), (cpuScore == targetScore));
+endGame = playerScore == targetScore | cpuScore == targetScore;
 events.expStop = endGame.then(1);
+
+outputs.playerScore = cond(playerScore>0, playerScore.map(@(x)...
+  sprintf('Player 1 Scores! Player 1: %d cpu: %d',...
+  x, cpuScore.Node.CurrValue)));
+outputs.cpuScore = cond(cpuScore>0, cpuScore.map(@(x)...
+  sprintf('cpu Scores! Player 1: %d cpu: %d',...
+  playerScore.Node.CurrValue, x)));
+outputs.gameOver =... 
+  cond(endGame == 1 & playerScore > cpuScore,... 
+  sprintf('Game Over! Player 1 Wins!'),... 
+  endGame == 1 & cpuScore > playerScore,... 
+  sprintf('Game Over. cpu Wins :('));
+%outputs.gameOverMessage = 
+% outputCpuScore = events.endTrial.map(@(~)... 
+%   fprintf('<strong> cpu Scores! Player 1: %d cpu: %d </strong>\n',...
+%   playerScore.Node.WorkingValue, cpuScore.Node.WorkingValue));
+% outputFinal = events.expStop.map(@(~)... 
+%   fprintf('<strong> Game Over! Final Score: Player 1: %d cpu: %d </strong>\n',...
+%   playerScore.Node.WorkingValue, cpuScore.Node.WorkingValue));
 
 % create listeners to display the score in the command window on a score 
 % and at game end
-events.endTrial.onValue(@(~)...
-  fprintf('<strong> Score! Player 1: %d cpu: %d </strong>\n',...
-  playerScore.Node.CurrValue, cpuScore.Node.CurrValue), 1);
-events.expStop.onValue(@(~)...
-  fprintf('<strong> Game Over! Final Score: Player 1: %d cpu: %d </strong>\n',...
-  playerScore.Node.CurrValue, cpuScore.Node.CurrValue), 1);
+% events.endTrial.onValue(@(~)...
+%   fprintf('<strong> Score! Player 1: %d cpu: %d </strong>\n',...
+%   playerScore.Node.CurrValue, cpuScore.Node.CurrValue), 1);
+% events.expStop.onValue(@(~)...
+%   fprintf('<strong> Game Over! Final Score: Player 1: %d cpu: %d </strong>\n',...
+%   playerScore.Node.CurrValue, cpuScore.Node.CurrValue), 1);
 
 %% Define the visual elements and the experiment parameters
 
@@ -303,6 +324,11 @@ visStim.cpuPaddle = cpuPaddle;
 
 % parameters for experimenter in GUI
 try
+  % 'ballColor' as conditional parameter: on any given trial, the ball
+  % color will be chosen at random among three colors: white, red, blue
+  p.ballColor = [1 1 1; 1 0 0; 0 0 1]'; % RGB color vector
+  p.playerPaddleColor = [1 1 1]'; % RGB color vector
+  p.cpuPaddleColor = [1 1 1]'; % RGB color vector
   p.targetScore = 5;
 catch
 end
