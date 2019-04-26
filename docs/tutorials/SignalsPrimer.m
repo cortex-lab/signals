@@ -213,7 +213,7 @@ b.Name
 % however, a signal can be defined by any number of other signals, as well
 % as by constants.
 % Mathematically, Signals can be viewed as variables which, any time they
-% take a new value, cause any equations dependent equations to be
+% take a new value, cause any dependent equations to be
 % re-evaluated.
 
 % Create some origin signals to post to
