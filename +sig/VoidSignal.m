@@ -135,7 +135,7 @@ classdef VoidSignal < sig.Signal
       s = this;
     end
     
-   function s = size(this, dim)
+    function s = size(this, dim)
       s = this;
     end
     
