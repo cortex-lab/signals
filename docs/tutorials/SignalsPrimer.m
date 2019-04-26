@@ -373,9 +373,11 @@ y = cond(...
   true, c);
 
 %% Demonstration of scan
-% Scan is a very powerful method that allows for mapping a signal's current
-% value and it's previous value through a function.  This allows for
-% defining Signals that have some sort of history to them.
+% Scan is a very powerful method that allows one to map a signal's current
+% value and it's previous value through a function.  This allows one to
+% define Signals that have some sort of history to them. This is similar to
+% the fold or reduce functions found in other functional programming 
+% applications.
 %
 % Below we take the value of x and return a value that is the accumulation
 % of x by using scan with the function plus.  The third argument to scan
