@@ -4,25 +4,18 @@ classdef SignalsExpTest < handle
   %
   % See also: EXPTEST, EXP.SIGNALSEXP
   
-%% properties
-
-  % can be set in command line to improve visualization
-  properties
-    ScreenH % handle to PTB Screen which displays visual stimuli
-  end
-  
 %% properties (SetAccess = ?exp.ExpTest)
 
-  % set by 'exp.ExpTest'
   properties (SetAccess = ?exp.ExpTest)
     ETest % 'ExpTest' object - parent for this class (see constructor method) 
+    ScreenH % handle to PTB Screen which displays visual stimuli
   end
   
 %% properties (SetAccess = private)
 
   properties (SetAccess = private)  
     Clock = hw.ptb.Clock % 'Clock' object that returns current time (in s)
-    QuitKey = KbName('q') % Keyboard key for quitting experiment and closing 'ScreenH'
+    QuitKey = KbName('q') % Keyboard key for quitting experiment
     Net % 'sig.Net' object - signals network
     T % 'sig.Node.OriginSignal' object - signals 'time' origin signal
     Events % 'sig.Registry' object - signals 'events' ExpDef input arg
@@ -49,7 +42,7 @@ classdef SignalsExpTest < handle
     NumSignalUpdates = 0
     GlobalPars % global parameters in GUI
     CondPars % conditional parameters in GUI
-    Messages % TidyHandle objects to display in the 'exp.ExpTest' Logging Display when the signal they listen to updates (for 'Outputs')
+    Messages % TidyHandle objects to display in the 'exp.ExpTest' Logging Display when the signal they listen to (in 'Outputs') updates
   end
   
 %% methods (Exposed)
@@ -102,7 +95,7 @@ classdef SignalsExpTest < handle
         ];
       
       % add listeners to appropriately update strings for 'Trial Number'
-      % and 'Reward Delivered' on 'ExpTestPanel'
+      % and 'Reward Delivered' in 'ETest'
       setCtrlStr = @(h)@(v)set(h, 'String', toStr(v));
       obj.Listeners = [obj.Listeners
         obj.Events.trialNum.onValue(setCtrlStr(obj.ETest.TrialNumCount));
@@ -114,8 +107,7 @@ classdef SignalsExpTest < handle
         ];
       end
       
-      % get all signals that belong to 'obj.Outputs' registry, and map them
-      % to 'obj.ETest.log'
+      % add listeners for 'obj.Outputs' registry; display in 'ETest'
       allOuts = fieldnames(obj.Outputs);
       for i = 1:length(allOuts)
         curName = allOuts{i};

@@ -181,36 +181,36 @@ gameData = playerPaddleY.scan(@updateGame, gameDataInit).subscriptable;
       % 7) off cpu from bottom; 8) off cpu from top; 
       % 9) playerScored | cpuScored
       
-      if wallContact && (0 < gameData.ballAngle) &&... 
-          (gameData.ballAngle < 90) % case 1)
+      if wallContact && (0 <= gameData.ballAngle) &&... 
+          (gameData.ballAngle <= 90) % case 1)
         gameData.ballAngle = randi([270, 360]);
         gameData.ballY = gameData.ballY + 1;
-      elseif wallContact && (90 < gameData.ballAngle) &&... 
-          (gameData.ballAngle < 180) % case 2)
+      elseif wallContact && (90 <= gameData.ballAngle) &&... 
+          (gameData.ballAngle <= 180) % case 2)
         gameData.ballAngle = randi([180, 270]);
         gameData.ballY = gameData.ballY + 1;
-      elseif wallContact && (270 < gameData.ballAngle) &&... 
-          (gameData.ballAngle < 360) % case 3)
+      elseif wallContact && (270 <= gameData.ballAngle) &&... 
+          (gameData.ballAngle <= 360) % case 3)
         gameData.ballAngle = randi([0, 90]); 
         gameData.ballY = gameData.ballY - 1;
-      elseif wallContact && (180 < gameData.ballAngle) &&... 
-          (gameData.ballAngle < 270) % case 4)
+      elseif wallContact && (180 <= gameData.ballAngle) &&... 
+          (gameData.ballAngle <= 270) % case 4)
         gameData.ballAngle = randi([90, 180]);
         gameData.ballY = gameData.ballY - 1;
       elseif playerContact &&...
-          (0 < gameData.ballAngle) && (gameData.ballAngle < 90) % case 5)
+          (0 <= gameData.ballAngle) && (gameData.ballAngle <= 90) % case 5)
         gameData.ballAngle = randi([90, 180]);
         gameData.ballX = gameData.ballX - 1;
       elseif playerContact &&...
-        (270 < gameData.ballAngle) && (gameData.ballAngle < 360) % case 6)
+        (270 <= gameData.ballAngle) && (gameData.ballAngle <= 360) % case 6)
       gameData.ballAngle = randi([180, 270]);
       gameData.ballX = gameData.ballX - 1;
       elseif cpuContact &&...
-          (90 < gameData.ballAngle) && (gameData.ballAngle < 180) % case 7) 
+          (90 <= gameData.ballAngle) && (gameData.ballAngle <= 180) % case 7) 
         gameData.ballAngle = randi([0, 90]);
         gameData.ballX = gameData.ballX + 1;
       elseif cpuContact &&... 
-          (180 < gameData.ballAngle) && (gameData.ballAngle < 270) % case 8)
+          (180 <= gameData.ballAngle) && (gameData.ballAngle <= 270) % case 8)
         gameData.ballAngle = randi([270, 360]);
         gameData.ballX = gameData.ballX + 1;
       elseif playerScored || cpuScored % case 9)
@@ -244,14 +244,22 @@ playerScore = gameData.playerScore.skipRepeats();
 cpuScore = gameData.cpuScore.skipRepeats();
 cpuPaddleY = gameData.cpuPaddleY;
 
+%todo: delete these below
+events.ballX = ballX;
+events.ballY = ballY;
+events.ballVelX = gameData.ballVelX;
+events.ballVelY = gameData.ballVelY;
+events.ballAngle = gameData.ballAngle;
+
 % define trial end (when a score occurs)
 anyScored = playerScore | cpuScore;
 events.endTrial = anyScored.then(1);
 
 % define game end (when player or cpu score reaches target score)
 endGame = playerScore == targetScore | cpuScore == targetScore;
-events.expStop = endGame.then(1);
+events.expStop = endGame.then(1).delay(0.1);
 
+% output to the 'ExpTestPanel' logging display on a score and at game end
 outputs.playerScore = cond(playerScore>0, playerScore.map(@(x)...
   sprintf('Player 1 Scores! Player 1: %d cpu: %d',...
   x, cpuScore.Node.CurrValue)));
@@ -259,29 +267,10 @@ outputs.cpuScore = cond(cpuScore>0, cpuScore.map(@(x)...
   sprintf('cpu Scores! Player 1: %d cpu: %d',...
   playerScore.Node.CurrValue, x)));
 outputs.gameOver =... 
-  cond(endGame == 1 & playerScore > cpuScore,... 
-  sprintf('Game Over! Player 1 Wins!'),... 
-  endGame == 1 & cpuScore > playerScore,... 
-  sprintf('Game Over. cpu Wins :('));
-%outputs.gameOverMessage = 
-% outputCpuScore = events.endTrial.map(@(~)... 
-%   fprintf('<strong> cpu Scores! Player 1: %d cpu: %d </strong>\n',...
-%   playerScore.Node.WorkingValue, cpuScore.Node.WorkingValue));
-% outputFinal = events.expStop.map(@(~)... 
-%   fprintf('<strong> Game Over! Final Score: Player 1: %d cpu: %d </strong>\n',...
-%   playerScore.Node.WorkingValue, cpuScore.Node.WorkingValue));
-
-% create listeners to display the score in the command window on a score 
-% and at game end
-% events.endTrial.onValue(@(~)...
-%   fprintf('<strong> Score! Player 1: %d cpu: %d </strong>\n',...
-%   playerScore.Node.CurrValue, cpuScore.Node.CurrValue), 1);
-% events.expStop.onValue(@(~)...
-%   fprintf('<strong> Game Over! Final Score: Player 1: %d cpu: %d </strong>\n',...
-%   playerScore.Node.CurrValue, cpuScore.Node.CurrValue), 1);
+  endGame.then(cond(playerScore > cpuScore, sprintf('Game Over! Player 1 Wins!'),... 
+  cpuScore > playerScore, sprintf('Game Over. cpu Wins :('))).delay(0.01);
 
 %% Define the visual elements and the experiment parameters
-
 
 % create arena as a 'vis.patch' rectangle subscriptable signal
 arena = vis.patch(t, 'rectangle');
@@ -320,7 +309,6 @@ visStim.arena = arena;
 visStim.ball = ball;
 visStim.playerPaddle = playerPaddle;
 visStim.cpuPaddle = cpuPaddle;
-
 
 % parameters for experimenter in GUI
 try

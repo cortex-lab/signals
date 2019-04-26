@@ -36,7 +36,7 @@ classdef ExpTest < handle
   properties
     ScreenH % handle to PTB Screen which displays visual stimuli
     LivePlotFig % handle to figure for live-plotting signals
-    LoggingDisplay % window for showing log output
+    LoggingDisplay % window within 'PanelH' for showing log output
   end 
   
 %% properties (SetAccess = ?exp.SignalsExpTest)
@@ -103,7 +103,9 @@ classdef ExpTest < handle
     
     function paramProfileChanged(obj, src, ~)
     % callback for user GUI-selected parameter profile
-    
+      if isa(src, 'eui.ParamEditor') % if a change was made to a single parameter
+        return
+      end
       profile = cell2mat(src.Option(src.SelectedIdx));
       obj.loadParameters(profile);
     end
@@ -144,7 +146,7 @@ classdef ExpTest < handle
     % stops experiment if running, and starts experiment if not running
       
       if obj.IsRunning %  stop experiment
-        fprintf('<strong> ExpTestPanel Experiment Ending </strong>\n');
+        obj.log('ExpTestPanel Experiment Ending');
         obj.SigExpTest.quit;
         obj.SigExpTest = [];
         obj.IsRunning = false;
@@ -156,7 +158,7 @@ classdef ExpTest < handle
         if ~isempty(livePlotH)
           close('LivePlot')
         end
-        fprintf('<strong> ExpTestPanel Experiment Starting </strong>\n');
+        obj.log('ExpTestPanel Experiment Starting');
         obj.StartButton.set('String', 'Stop');
         obj.IsRunning = true;
         obj.SigExpTest.run;
@@ -170,6 +172,11 @@ classdef ExpTest < handle
       toDisplay = sprintf('[%s] %s', timestamp, message);
       curDisplay = get(obj.LoggingDisplay, 'String');
       set(obj.LoggingDisplay, 'String', [curDisplay; toDisplay]);
+    end
+    
+    function clearLog(obj, src, event)
+      % clears 'LoggingDisplay'
+      obj.LoggingDisplay.String = {};
     end
     
     function delete(obj, ~, ~)
@@ -250,6 +257,10 @@ classdef ExpTest < handle
       obj.LoggingDisplay = uicontrol('Parent', obj.MainGrid,... 
         'Style', 'listbox', 'Enable', 'inactive', 'String', {},... 
         'Tag', 'Logging Display');
+      c = uicontextmenu(obj.PanelH);
+      obj.LoggingDisplay.UIContextMenu = c;
+      m1 = uimenu(c, 'Label', 'Clear Logging Display',...
+        'callback', @(src,event) obj.clearLog(src,event));
       obj.MainGrid.set('Heights', [-2 -9 -3]);
     end
     
