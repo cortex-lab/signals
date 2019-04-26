@@ -32,7 +32,7 @@ ylim([0 winlen] + 0.5);
 % Create a signal of WindowKeyPressFcn events from the figure
 keyPresses = sigbox.fromUIEvent(figh, 'WindowKeyPressFcn'); 
 % Create a filtered version, only keeping Ctrl presses. Turn each into 'true'
-reports = keyPresses.keepWhen(strcmp(keyPresses.Key, 'space')).map(true);
+reports = strcmp(keyPresses.Key, 'control');
 % Sample the current time at presentationRate
 sampler = skipRepeats(floor(presentationRate*t));
 % Randomly sample orientations and phases using sampler

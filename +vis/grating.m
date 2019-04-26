@@ -4,7 +4,7 @@ function elem = grating(t, grating, window)
 %  may be windowed by a Gaussian stencil, producing a Gabor patch
 %
 %  Inputs:
-%    t - The 'time' signal. Used to obtain the *signals* network ID.
+%    t - The 'time' signal. Used to obtain the Signals network ID.
 %      (Could be any signal within the network - 't' is chosen by
 %      convention).
 %    grating - char array defining the nature of the grating. Options are

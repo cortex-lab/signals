@@ -354,25 +354,7 @@ classdef Signal < sig.Signal & handle
       l.Node.CurrValue = struct('time', {}, 'value', {});
     end
     
-    function h = onValue(this, fun, noHFlag)
-      % Creates a listener for a signal when the signal takes a value. 
-      % If 'noHFlag' evaluates to true, the listener can listen outside
-      % the scope in which it was created.
-      %
-      % Inputs:
-      %   'fun': the function to be executed when the signal updates
-      %   'noHFlag': a flag to specify whether to return 'h' as a
-      %     TidyHandle handle to the listener, or as an emtpy TidyHandle
-      %     object
-      %
-      % Outputs: 
-      %   'h': a TidyHandle object that acts as a handle for the listener
-      %
-      % Example:
-      %   h = this.onValue(@(x) disp(x));
-      %   h = this.onValue(@(x) disp(x), 1);
-      %
-      % See also: sig.Signal/output
+    function h = onValue(this, fun)
       callbackidx = this.NextCallbackId + 1;
       this.NextCallbackId = callbackidx;
       this.OnValueCallbacks(callbackidx) = fun;
@@ -380,22 +362,14 @@ classdef Signal < sig.Signal & handle
         % so we now need to listen to mxnode events
         setNodeEventTarget(this.Node.NetId, this.Node.Id, this);
       end
-      if nargin < 3 || ~noHFlag
-        h = TidyHandle(@unsub);
-      elseif noHFlag % if 'noHFlag' is evaluated to true
-        h = TidyHandle.empty;
-      end
-      
+      h = TidyHandle(@unsub);
       function unsub()
-        % Helper function which removes the listener from the signal's list
-        % of listeners when the handle to the listener ('h') is deleted
         this.OnValueCallbacks.remove(callbackidx);
         if isempty(this.OnValueCallbacks) % list now empty
           % remove us as the event target from the mxnode
           setNodeEventTarget(this.Node.NetId, this.Node.Id, []);
         end
       end
-      
     end
     
     function h = output(this)

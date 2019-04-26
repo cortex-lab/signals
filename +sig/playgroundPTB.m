@@ -23,13 +23,12 @@ vbox = uix.VBox('Parent', parent);
 
 % Get number of available screens
 nScreens = Screen('Screens');
-screenNum = iff(nScreens(end) > 1, 1, 0);
+screenNum = iff(max(nScreens) > 1, 1, 0);
 vc = Screen('OpenWindow', screenNum, 0, [0,0,1280,600], 32);
 Screen('FillRect', vc, 255/2);
 Screen('Flip', vc);
 
 btnbox = uix.HBox('Parent', vbox);
-%vbox.Sizes = 30;
 btnh = uicontrol('Parent', btnbox, 'Style', 'pushbutton',...
   'String', 'Play', 'Callback', @(~,~)startstop());
 
