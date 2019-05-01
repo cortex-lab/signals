@@ -38,7 +38,6 @@ function axh = timeplot(varargin)
 % TODO Vararg for axes name value args, e.g. LineWidth
 % TODO Deal with logging signals & registries & subscriptable signals
 % TODO Deal with strings, arrays, structures, cell arrays
-% TODO Prettify labels/titles (create listeners for them to reset position each time a signal is updated?)
 
 %% Process inputs
 % Find the 'parent' named value
@@ -69,15 +68,6 @@ if present
 else % Default time window is 5 seconds
   tWin = 5;
 end
-% Find 'xlabelOff' named value
-[present, value, idx] = namedArg(varargin, 'xlabelOff');
-if present
-  xlabelOff = value;
-  varargin(idx:idx+1) = [];
-  else % Default is to keep xlabels off
-  xlabelOff = 0;
-end
-
 % Clear the figure
 clf(figh);
 
@@ -144,11 +134,6 @@ for i = 1:n
     @(x)struct('x',{x},'t',{GetSecs}), '%s(t)');
   % Set the title of the subplot to be the Signal's name
   title(axh(i), names{i}, 'interpreter', 'none');
-  if ~xlabelOff % if we're not hiding the xlabels
-    if i < n % hide xlabels for all but final subplot
-      set(axh(i),'XTickLabel',[]);
-    end
-  end
 end
 % Set the default font size and set the axes to add new plots without
 % clearing the old
