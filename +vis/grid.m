@@ -1,6 +1,27 @@
 function elem = grid(t)
-%VIS.GRATINGELEM Summary of this function goes here
-%   Detailed explanation goes here
+% VIS.GRID Returns a Signals grid stimulus
+%  Produces a visual element for parameterizing the presentation of a grid.
+%
+%  Inputs:
+%    't' - The "time" signal. Used to obtain the Signals network ID.
+%      (Could be any signal within the network - 't' is chosen by
+%      convention).
+%
+%  Outputs:
+%    'elem' - a subscriptable signal containing fields which parametrize
+%      the stimulus, and a field containing the processed texture layer. 
+%      Any of the fields may be a signal.
+%
+%  Stimulus parameters (fields belonging to 'elem'):
+%    'azimuths' -
+%    'altitudes' -
+%    'thickness' -
+%    'colour' -
+%    'show' -
+%
+% See Also VIS.EMPTYLAYER, VIS.CHECKER6, VIS.PATCH, VIS.GRATING, VIS.IMAGE
+%
+% todo: add to documentation
 
 elem = t.Node.Net.subscriptableOrigin('grid');
 elem.azimuths = [-180 -90 0 90 180];
@@ -11,8 +32,8 @@ elem.show = false;
 elem.layers = elem.map(@makeLayers).flattenStruct();
 
   function layers = makeLayers(newelem)
-    clear elem t; % eliminate references to unsed outer variables
-    %% columns
+    clear elem t; % eliminate references to unused outer variables
+    % columns
     colsize = [newelem.thickness 180];
     for li = 1:numel(newelem.azimuths)
         [layer, img] = vis.rectLayer(...
@@ -25,7 +46,7 @@ elem.layers = elem.map(@makeLayers).flattenStruct();
         layer.show = newelem.show;
         layers(li) = layer;
     end
-    %% rows
+    % rows
     rowsize = [360 newelem.thickness];
     for li = 1:numel(newelem.altitudes)
       [layer, img] = vis.rectLayer(...
@@ -38,19 +59,6 @@ elem.layers = elem.map(@makeLayers).flattenStruct();
       layer.show = newelem.show;
       layers(end+1) = layer;
     end
-%     switch lower(shape)
-%       case {'rectangle' 'rect' 'r'}
-%         [layer, img] = vis.rectLayer(...
-%           [newelem.azimuth; newelem.altitude],...
-%           newelem.size, newelem.orientation);
-%         layer.textureId = 'square';
-%         layer.blending = 'source';
-%       otherwise
-%         error('Invalid grating type ''%s''', shape);
-%     end
-%     layer.maxColour = [newelem.colour 1];
-%     [layer.rgba, layer.rgbaSize] = vis.rgba(1, img);
-%     layer.show = newelem.show;
   end
 
 end

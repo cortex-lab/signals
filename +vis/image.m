@@ -1,44 +1,45 @@
 function elem = image(t, sourceImage, window)
-% VIS.IMAGE Returns visual element for image presentation in Signals
+% VIS.IMAGE Returns a visual element for image presentation in Signals
 %  Produces a visual element for parameterizing the presentation of an
-%  image
+%  image.
 %
 %  Inputs:
-%    t - any signal with which to derive the network ID.  By convetion we
-%      use the t signal
-%    sourceImage - either an image or path to an image
-%    window - char array defining the type of windowing applied.  Options
-%      are 'none' (default) or 'gaussian'
+%    't' - The "time" signal. Used to obtain the Signals network ID.
+%      (Could be any signal within the network - 't' is chosen by
+%      convention).
+%    'sourceImage' - Either an image or path to an image.
+%    'window' - A char array defining the type of windowing applied.
+%      Options are 'none' (default) or 'gaussian'.
 %
 %  Outputs:
-%    elem - a subscriptable signal containing paramter fields for the
-%      stimulus along with the processed texture layers.  Any parameter may
-%      be a signal.
+%    'elem' - a subscriptable signal containing fields which parametrize
+%      the stimulus, and a field containing the processed texture layer. 
+%      Any of the fields may be a signal.
 %
-%  Stimulus (elem) parameters:
-%    grating - see above
-%    window - see above
-%    azimuth - the position of the shape in the azimuth (position of the
+%  Stimulus parameters (fields belonging to 'elem'):
+%    'grating' - see above
+%    'window' - see above
+%    'azimuth' - the position of the shape in the azimuth (position of the
 %      centre pixel in visual degrees).  Default 0
-%    altitude - the position of the shape in the altitude. Default 0
-%    sigma - if window is Gaussian, the size of the window in visual
+%    'altitude' - the position of the shape in the altitude. Default 0
+%    'sigma' - if window is Gaussian, the size of the window in visual
 %      degrees.  Must be an array of the form [width height].
 %      Default [10 10]
-%    phase - the phase of the grating in visual degrees.  Default 0
-%    spatialFreq - the spatial frequency of the grating in cycles per
+%    'phase' - the phase of the grating in visual degrees.  Default 0
+%    'spatialFreq' - the spatial frequency of the grating in cycles per
 %      visual degree.  Default 1/15
-%    orientation - the orientation of the grating in degrees. Default 0
-%    colour - an array defining the intensity of the red, green and blue
-%      channels respectively.  Values must be between 0 and 1.  Default [1
-%      1 1]
-%    contrast - the normalized contrast of the grating (between 0 and 1).
+%    'orientation' - the orientation of the grating in degrees. Default 0
+%    'colour' - an array defining the intensity of the red, green and blue
+%      channels respectively.  Values must be between 0 and 1.
+%      Default [1 1 1]
+%    'contrast' - the normalized contrast of the image (between 0 and 1).
 %      Default 1
-%    show - a logical indicating whether or not the stimulus is visible.
+%    'show' - a logical indicating whether or not the stimulus is visible.
 %      Default false
 %
-%  TODO Add contrast parameter
+%  See Also VIS.EMPTYLAYER, VIS.PATCH, VIS.GRATING, VIS.CHECKER6, VIS.GRID,
 %
-%  See Also VIS.GRATING, VIS.CHECKER6, VIS.GRID, VIS.IMAGE
+%  TODO Add contrast parameter
 
 % Define our default inputs
 if nargin < 2
@@ -55,34 +56,34 @@ if nargin < 3 || isempty(window)
 end
 
 % Add a new subscriptable origin signal to the same network as the input
-% signal, t, and use this to store the stimulus texture layer and
+% signal, 't', and use this to store the stimulus texture layer and
 % parameters
 elem = t.Node.Net.subscriptableOrigin('image');
 elem.azimuth = 0;
 elem.altitude = 0;
-elem.dims = [50,50];
+elem.dims = [50,50]';
 elem.orientation = 0;
 elem.sourceImage = sourceImage;
-elem.colour = [1 1 1];
+elem.colour = [1 1 1]';
 elem.rescale = false;
 elem.show = false;
 elem.isPeriodic = false;
 elem.window = window;
-elem.sigma = [5,5];
+elem.sigma = [5,5]';
 
 % Map the visual element signal through the below function 'makeLayer' and
-% assign it to the layers field.  When any of the above parameters takes a
-% new value, makeLayer is called, returning the texture layer.
-% flattenStruct returns the same texture layer but with all fields
-% containing signals replaced by their current value.  It is this field
-% that is loaded by VIS.DRAW
+% assign it to the 'layers' field.  When any of the above parameters takes
+% a new value, 'makeLayer' is called, returning the texture layer.
+% 'flattenStruct' returns the same texture layer but with all fields
+% containing signals replaced by their current value. The 'layers' field
+% is loaded by VIS.DRAW
 elem.layers = elem.map(@makeLayers).flattenStruct();
 
   function layers = makeLayers(newelem)
-    clear elem t; % eliminate references to unsed outer variables
-    %% make an image layer
+    clear elem t; % eliminate references to unused outer variables
+    % make an image layer
     imgLayer = vis.emptyLayer();
-    % If sourceImage field is empty, return an empty layer
+    % If 'sourceImage' field is empty, return an empty layer
     if isempty(newelem.sourceImage)
       layers = imgLayer;
       return
@@ -93,8 +94,11 @@ elem.layers = elem.map(@makeLayers).flattenStruct();
     imgLayer.isPeriodic = newelem.isPeriodic;
     imgLayer.textureId = 'image';
     imgLayer.interpolation = 'linear';
-    imgLayer.maxColour = [newelem.colour 1];
+    imgLayer.maxColour = [newelem.colour(:); 1];
     
+    % Convert the texture image to the correct format - a column vector of
+    % RGBA values between 0 and 255. Output the image size to the
+    % 'rgbaSize' field
     if isobject(newelem.sourceImage)
       if newelem.rescale
         imgLayer.rgba = map(newelem.sourceImage,...
@@ -116,7 +120,7 @@ elem.layers = elem.map(@makeLayers).flattenStruct();
     
     imgLayer.show = newelem.show;
     
-    %% make a stencil layer using a window of the specified type
+    % make a stencil layer using a window of the specified type
     if ~strcmpi(newelem.window, 'none')
       switch lower(newelem.window)
         case {'gaussian' 'gauss'}
@@ -133,7 +137,6 @@ elem.layers = elem.map(@makeLayers).flattenStruct();
     else % no window
       winLayer = [];
     end
-    %
     layers = [winLayer, imgLayer];
   end
   function img = rescale(img)
