@@ -1,3 +1,5 @@
+% vis.squareWaveLayer test
+
 %% Test 1: vis.grating default values
 azimuth = 0; spatialFreq = 1/15; phase = 0; orientation = 0;
 [layer, image] = vis.squareWaveLayer(azimuth, spatialFreq, phase, orientation);

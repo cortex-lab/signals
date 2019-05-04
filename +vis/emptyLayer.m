@@ -17,17 +17,17 @@ layer.show = false;
 % practice.
 layer.textureId = [];
 % POS TODO
-layer.pos = [0 0];
+layer.pos = [0 0]';
 % SIZE array of the form [azimuth altitude] defining the size of the
 % texture in visual degrees
-layer.size = [0 0];
+layer.size = [0 0]';
 % VIEWANGLE The view angle in degrees TODO
 layer.viewAngle = 0;
 % TEXANGLE the texture angle in degrees TODO
 layer.texAngle = 0;
 % TEXOFFSET an array of the form [azimuth altitude] indicating the texture
 % offset from the centre of the viewer's visual field in visual degrees
-layer.texOffset = [0 0];
+layer.texOffset = [0 0]';
 % ISPERIODIC logical - when true the texture is replicated across the
 % entire visual space
 layer.isPeriodic = true;
@@ -41,14 +41,14 @@ layer.blending = 'source';
 % MINCOLOUR & MAXCOLOUR arrays of the form [R G B A] indicating the min
 % (max) intensity of the red, green and blue channels, along with the amout
 % of opacity (alpha).  Values must be between 0 and 1.
-layer.minColour = [0 0 0 0];
-layer.maxColour = [1 1 1 1];
+layer.minColour = [0 0 0 0]';
+layer.maxColour = [1 1 1 1]';
 % COLOURMASK logical array indicating whether the red, green, blue and
 % alpha channels may be written to the frame buffer.  When any of these
 % channels are set to false no change is made to that component of any
 % pixel in any of the color buffers, regardless of any changes to the
 % texture image
-layer.colourMask = [true true true true];
+layer.colourMask = [true true true true]';
 % INTERPOLATION char array indicating the type of interpolation applied.
 % Options:
 %  'nearest' - Nearest neighbour interpolation
@@ -60,7 +60,7 @@ layer.interpolation = 'linear';
 layer.rgba = [];
 % RGBASIZE array of the form [m n] where m and n are the sizes of the first
 % two dimentions of the texture image
-layer.rgbaSize = [0 0];
+layer.rgbaSize = [0 0]';
 
 % Replicate the layer n times
 if nargin > 0 

@@ -13,14 +13,15 @@ function elem = patch(t, shape)
 %  Outputs:
 %    'elem' - a subscriptable signal containing fields which parametrize
 %      the stimulus, and a field containing the processed texture layer. 
-%      Any of the fields may be a signal.
+%      Currently, any of the fields but 'dims' for 'circle' may be a signal.
 % 
 %  Stimulus parameters (fields belonging to 'elem'):
-%    'azimuth' - the position of the shape in the azimuth (position of the
-%      centre pixel in visual degrees). Default 0
-%    'altitude' - the position of the shape in the altitude. Default 0
-%    'dims' - the dimentions of the shape in visual degrees. May be an array
-%      of the form [width height] or a scalar if these dimentions are
+%    'azimuth' - the azimuth of the image (position of the centre pixel in 
+%     visual degrees).  Default 0
+%    'altitude' - the altitude of the image (position of the centre pixel 
+%     in visual degrees). Default 0
+%    'dims' - the dimensions of the shape in visual degrees. May be an
+%      array of the form [width height] or a scalar if these dimensions are
 %      equal. Default [10 10]
 %    'orientation' - the orientation of the shape in degrees. Default 0
 %    'colour' - an array defining the intensity of the red, green and blue
@@ -75,7 +76,7 @@ elem.layers = elem.map(@makeLayer).flattenStruct();
           newelem.dims, newelem.orientation);
         layer.textureId = 'cross';
       otherwise
-        error('Invalid grating type ''%s''', shape);
+        error('shape:error', 'Invalid shape type ''%s''', shape);
     end
     layer.blending = 'source';
     % Set the layer colour according to the element's 'colour' parameter,

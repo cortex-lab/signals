@@ -34,7 +34,7 @@ radius = round(dims(1) * (0.9^(dims(1)-23)+1));
 y = round(dims(2) * (0.9^(dims(2)-23)+1));
 
 % Create meshgrid with which to produce curve
-[xx, yy] = meshgrid(1:radius, 1:y);
+[xx, yy] = meshgrid(colon(1,radius), colon(1,y));
 dd = sqrt(xx.^2 + yy.^2);
 img = taper(dd) + taper(-dd) - 1; % Border anti-aliasing
 img = single([rot90(img,2), flipud(img); fliplr(img), img]); % Put quarters together

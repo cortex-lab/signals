@@ -12,7 +12,7 @@ function elem = grating(t, grating, window)
 %    'grating' - A char array defining the nature of the grating. Options
 %      are 'sinusoid' (default) or 'squarewave'.
 %    'window' - A char array defining the type of windowing applied.
-%      Options are 'none' (default) or 'gaussian'.
+%      Options are 'gaussian' (default) or 'none'.
 %    
 %  Outputs:
 %    'elem' - a subscriptable signal containing fields which parametrize
@@ -22,9 +22,10 @@ function elem = grating(t, grating, window)
 %  Stimulus parameters (fields belonging to 'elem'):
 %    'grating' - see above
 %    'window' - see above
-%    'azimuth' - the position of the shape in the azimuth (position of the
-%      centre pixel in visual degrees). Default 0
-%    'altitude' - the position of the shape in the altitude. Default 0
+%    'azimuth' - the azimuth of the image (position of the centre pixel in 
+%     visual degrees).  Default 0
+%    'altitude' - the altitude of the image (position of the centre pixel 
+%     in visual degrees). Default 0
 %    'sigma' - if window is Gaussian, the size of the window in visual 
 %      degrees. Must be an array of the form [width height].  
 %      Default [10 10]
@@ -67,7 +68,7 @@ elem.colour = [1 1 1]';
 elem.contrast = 1;
 elem.show = false;
 
-% Map the visual element signal through the below function 'makeLayer' and
+% Map the visual element signal through the below function 'makeLayers' and
 % assign it to the 'layers' field.  When any of the above parameters takes
 % a new value, 'makeLayer' is called, returning the texture layer.
 % 'flattenStruct' returns the same texture layer but with all fields
@@ -88,7 +89,7 @@ switch lower(newelem.grating)
       newelem.spatialFreq, newelem.phase, newelem.orientation);
     gratingLayer.textureId = 'squareWaveGrating';
   otherwise
-    error('Invalid grating type ''%s''', grating);
+    error('grating:error', 'Invalid grating type ''%s''', newelem.grating);
 end
 % Convert the texture image to the correct format - a column vector of
 % RGBA values between 0 and 255. Output the image size to the
@@ -110,7 +111,7 @@ if ~strcmpi(newelem.window, 'none')
         [newelem.azimuth; newelem.altitude], newelem.sigma);
       winLayer.textureId = 'gaussianStencil';
     otherwise
-      error('Invalid window type ''%s''', window);
+      error('window:error', 'Invalid window type ''%s''', newelem.window);
   end
   [winLayer.rgba, winLayer.rgbaSize] = vis.rgba(0, winImg);
   winLayer.blending = 'none';

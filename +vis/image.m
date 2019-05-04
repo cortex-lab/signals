@@ -7,7 +7,8 @@ function elem = image(t, sourceImage, window)
 %    't' - The "time" signal. Used to obtain the Signals network ID.
 %      (Could be any signal within the network - 't' is chosen by
 %      convention).
-%    'sourceImage' - Either an image or path to an image.
+%    'sourceImage' - Either a standard image file, or path to a '.mat' file
+%      containing an image represented as a numeric array.
 %    'window' - A char array defining the type of windowing applied.
 %      Options are 'none' (default) or 'gaussian'.
 %
@@ -17,27 +18,32 @@ function elem = image(t, sourceImage, window)
 %      Any of the fields may be a signal.
 %
 %  Stimulus parameters (fields belonging to 'elem'):
-%    'grating' - see above
+%    'sourceImage' - see above
 %    'window' - see above
-%    'azimuth' - the position of the shape in the azimuth (position of the
-%      centre pixel in visual degrees).  Default 0
-%    'altitude' - the position of the shape in the altitude. Default 0
-%    'sigma' - if window is Gaussian, the size of the window in visual
-%      degrees.  Must be an array of the form [width height].
-%      Default [10 10]
-%    'phase' - the phase of the grating in visual degrees.  Default 0
-%    'spatialFreq' - the spatial frequency of the grating in cycles per
-%      visual degree.  Default 1/15
-%    'orientation' - the orientation of the grating in degrees. Default 0
+%    'azimuth' - the azimuth of the image (position of the centre pixel in 
+%      visual degrees).  Default 0
+%    'altitude' - the altitude of the image (position of the centre pixel 
+%      in visual degrees). Default 0
+%    'dims' - the dimensions of the shape in visual degrees. May be an
+%      array of the form [width height] or a scalar if these dimensions are
+%      equal. Default [10 10]
+%    'orientation' - the orientation of the image in degrees. Default 0
 %    'colour' - an array defining the intensity of the red, green and blue
 %      channels respectively.  Values must be between 0 and 1.
 %      Default [1 1 1]
+%    'rescale' - a logical indicating whether or not to rescale the image.
+%      Default false.
+%    'isPeriodic' - a logical indicating whether or not to repeat the image
+%      over the entire visual field. Default false
 %    'contrast' - the normalized contrast of the image (between 0 and 1).
 %      Default 1
 %    'show' - a logical indicating whether or not the stimulus is visible.
 %      Default false
+%    'sigma' - the size of the gaussian window in visual degrees [w h].
+%      Default [5 5]
 %
-%  See Also VIS.EMPTYLAYER, VIS.PATCH, VIS.GRATING, VIS.CHECKER6, VIS.GRID,
+%  See Also VIS.EMPTYLAYER, VIS.PATCH, VIS.GRATING, VIS.CHECKER6, VIS.GRID, IMREAD
+%  
 %
 %  TODO Add contrast parameter
 
@@ -71,7 +77,7 @@ elem.isPeriodic = false;
 elem.window = window;
 elem.sigma = [5,5]';
 
-% Map the visual element signal through the below function 'makeLayer' and
+% Map the visual element signal through the below function 'makeLayers' and
 % assign it to the 'layers' field.  When any of the above parameters takes
 % a new value, 'makeLayer' is called, returning the texture layer.
 % 'flattenStruct' returns the same texture layer but with all fields
@@ -128,7 +134,7 @@ elem.layers = elem.map(@makeLayers).flattenStruct();
             [newelem.azimuth; newelem.altitude], newelem.sigma);
           winLayer.textureId = 'gaussianStencil';
         otherwise
-          error('Invalid window type ''%s''', newelem.window);
+          error('window:error', 'Invalid window type ''%s''', newelem.window);
       end
       [winLayer.rgba, winLayer.rgbaSize] = vis.rgba(0, winImg);
       winLayer.blending = 'none';

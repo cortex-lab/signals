@@ -511,6 +511,23 @@ classdef Signal < handle
       % input signal
       x = map(strSig, @str2num, 'str2num(%s)');
     end
+    
+    function b = round(a)
+      b = map(a, @round, 'round(%s');
+    end
+    
+    function b = sum(a, dim)
+      if nargin < 2
+        b = map(a, @sum, 'sum(%s)');
+      else
+        b = map2(a, dim, @sum, 'sum(%s) over dim %s');
+      end
+    end
+    
+    function a = colon(i,j)
+      a = map2(i,j, @colon, '%s : %s');
+    end
+      
   end
   
 end

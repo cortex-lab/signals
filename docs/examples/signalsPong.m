@@ -244,13 +244,6 @@ playerScore = gameData.playerScore.skipRepeats();
 cpuScore = gameData.cpuScore.skipRepeats();
 cpuPaddleY = gameData.cpuPaddleY;
 
-%todo: delete these below
-events.ballX = ballX;
-events.ballY = ballY;
-events.ballVelX = gameData.ballVelX;
-events.ballVelY = gameData.ballVelY;
-events.ballAngle = gameData.ballAngle;
-
 % define trial end (when a score occurs)
 anyScored = playerScore | cpuScore;
 events.endTrial = anyScored.then(1);
