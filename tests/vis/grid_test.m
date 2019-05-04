@@ -16,7 +16,7 @@ t = net.origin('t');
 % d) the values posted to vector fields of the grid can be
 %    assigned as either column or row vectors
 
-% todo: add test for if/when 'azimuths' and 'altitudes' can be set as
+% @todo add test for if/when 'azimuths' and 'altitudes' can be set as
 % signals
 
 %% Test 1: check layer creation

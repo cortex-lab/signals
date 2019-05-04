@@ -181,7 +181,7 @@ classdef Signal < sig.Signal & handle
     
     function b = bufferUpTo(this, nSamples)
       
-      % todo: implement as a transfer function
+      % @todo implement as a transfer function
       b = scan(this, sig.scan.buffering(nSamples), []);
       b.Node.FormatSpec = sprintf('%%s.bufferUpTo(%i)', nSamples);
     end

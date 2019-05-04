@@ -23,8 +23,8 @@ function elem = grid(t)
 %
 % See Also VIS.EMPTYLAYER, VIS.RECTLAYER, VIS.CHECKER6, VIS.PATCH, VIS.GRATING, VIS.IMAGE
 %
-% todo: add to documentation
-% todo: allow fields 'azimuths' and 'azimuths' to take signals as values
+% @todo add to documentation
+% @todo allow fields 'azimuths' and 'azimuths' to take signals as values
 
 elem = t.Node.Net.subscriptableOrigin('grid');
 elem.azimuths = [-180 -90 0 90 180]';

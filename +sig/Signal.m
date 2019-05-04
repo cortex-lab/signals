@@ -19,7 +19,7 @@ classdef Signal < handle
   % *Note: when running the example code for the below methods, continue
   % from the 'Running Example' code written above
   %
-  % todo: @body move long method examples/descriptions from here to
+  % @todo @body move long method examples/descriptions from here to
   % tutorials section, then reset examples/descriptions to something
   % similar Chris' originals
   

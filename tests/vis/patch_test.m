@@ -113,7 +113,7 @@ assert(isobject(visStim));
 pars = net.subscriptableOrigin('pars');
 elem.colour = pars.elemColour;
 elem.show = true;
-% todo: if/when 'dims' for 'circle' is able to be assigned a signal, 
+% @todo if/when 'dims' for 'circle' is able to be assigned a signal, 
 % create a test for this
 % elem.dims = pars.elemDims; 
 parsStruct = struct;
