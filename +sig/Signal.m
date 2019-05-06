@@ -513,8 +513,14 @@ classdef Signal < handle
       x = map(strSig, @str2num, 'str2num(%s)');
     end
     
-    function b = round(a)
-      b = map(a, @round, 'round(%s');
+    function b = round(a,N,type)
+      if nargin < 2
+        b = map(a, @round, 'round(%s)');
+      elseif nargin < 3
+        b = map2(a, N, @round, 'round(%s) to %s digits');
+      else
+        b = mapn(a, N, type, @round, 'round(%s) to %s digits by %s');
+      end
     end
     
     function b = sum(a, dim)
