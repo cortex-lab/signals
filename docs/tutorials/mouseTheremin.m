@@ -1,5 +1,9 @@
 function mouseTheremin()
-%mouseTheremin using signals. Also requires PsychToolbox
+% 'Mouse Theremin' implemented using signals. 
+%   The function maps the current horizontal curser position to a given
+%   frequency.  As the mouse is moved the frequency changes much like a
+%   theremin.  Press any key to end the demonstration. Requires
+%   PsychToolbox
 
 audioSR = 96e3; %sample rate of audio device
 minSamples = round(0.0075*audioSR); %minimum number of samples to output
@@ -9,7 +13,7 @@ pos = n.origin('t'); % mouse position
 f = 1000*2.^(pos/1000); % transform pos into a log frequency scale
 tones = f.map(@packet); % turn frequencies into tones
 
-audh = audstream.fromSignal(tones, audioSR, 2); % put the tones into the stream
+audh = audstream.fromSignal(tones, audioSR, 2); % put the tqones into the stream
 
 % listen to keyboard events
 KbQueueCreate();

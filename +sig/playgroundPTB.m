@@ -1,4 +1,4 @@
-function [t, setgraphic, curser] = playgroundPTB(title, parent)
+function [t, setgraphic] = playgroundPTB(title, parent)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 %equivalent to exp.SignalsExp
@@ -36,7 +36,6 @@ sn = sig.Net;
 dt = sn.origin('dt');
 t = dt.scan(@plus, 0);
 t.Name = 'time';
-curser = sn.origin('curser');
 
 tlast = [];
 listhandle = [];
@@ -79,8 +78,6 @@ renderCount = 0;
     tnow = GetSecs;
 %     tic
     post(dt, tnow - tlast);
-    post(curser, GetMouse());
-%     post(curser, readAbsolutePosition(cp));
 %     fprintf('%.0f\n', 1000*toc);
     tlast = tnow;
     runSchedule(sn);

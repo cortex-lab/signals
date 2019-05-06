@@ -1,4 +1,4 @@
-function elem = image(t, sourceImage, window)
+function elem = image(t, sourceImage, alpha)
 % VIS.IMAGE Returns a visual element for image presentation in Signals
 %  Produces a visual element for parameterizing the presentation of an
 %  image.
@@ -8,9 +8,11 @@ function elem = image(t, sourceImage, window)
 %      (Could be any signal within the network - 't' is chosen by
 %      convention).
 %    'sourceImage' - Either a standard image file, or path to a '.mat' file
-%      containing an image represented as a numeric array.
-%    'window' - A char array defining the type of windowing applied.
-%      Options are 'none' (default) or 'gaussian'.
+%      containing an image represented as a numeric array, or a signal 
+%      whose value is an image represtented as a numeric array.
+%    'alpha' - the alpha value(s) for the image.  Can be a single value or
+%      array the size of 'sourceImage.'  If no alpha value is provided and
+%      sourceImage is a char
 %
 %  Outputs:
 %    'elem' - a subscriptable signal containing fields which parametrize
@@ -28,68 +30,77 @@ function elem = image(t, sourceImage, window)
 %      array of the form [width height] or a scalar if these dimensions are
 %      equal. Default [10 10]
 %    'orientation' - the orientation of the image in degrees. Default 0
-%    'colour' - an array defining the intensity of the red, green and blue
-%      channels respectively.  Values must be between 0 and 1.
-%      Default [1 1 1]
-%    'rescale' - a logical indicating whether or not to rescale the image.
-%      Default false.
-%    'isPeriodic' - a logical indicating whether or not to repeat the image
+%    'repeat' - a logical indicating whether or not to repeat the image
 %      over the entire visual field. Default false
-%    'contrast' - the normalized contrast of the image (between 0 and 1).
-%      Default 1
 %    'show' - a logical indicating whether or not the stimulus is visible.
 %      Default false
 %    'sigma' - the size of the gaussian window in visual degrees [w h].
 %      Default [5 5]
 %
+%  NB: If loading multiple visual elements with different image paths,
+%  ensure that the images themselves have unique filenames.
+%
 %  See Also VIS.EMPTYLAYER, VIS.PATCH, VIS.GRATING, VIS.CHECKER6, VIS.GRID, IMREAD
 %  
-%
 %  TODO Add contrast parameter
-
-% Define our default inputs
-if nargin < 2
-  sourceImage = [];
-else
-  % If the image is a char array, assume it is a path and attempt to load
-  % the image
-  if isa(sourceImage, 'char')
-    sourceImage = imread(sourceImage);
-  end
-end
-if nargin < 3 || isempty(window)
-  window = 'none';
-end
+%  @body Add parameter to set overall contrast of the image, effectively
+%  scaling it?  Would need to know the range of the source image...
+%
+%  TODO Add colour parameter
+%  @body Add parameter to set the intensity of each channel. How would this
+%  work for none-greyscale source images?
 
 % Add a new subscriptable origin signal to the same network as the input
-% signal, 't', and use this to store the stimulus texture layer and
+% signal, t, and use this to store the stimulus texture layer and
 % parameters
 elem = t.Node.Net.subscriptableOrigin('image');
 elem.azimuth = 0;
 elem.altitude = 0;
 elem.dims = [50,50]';
 elem.orientation = 0;
-elem.sourceImage = sourceImage;
-elem.colour = [1 1 1]';
-elem.rescale = false;
+elem.repeat = false;
+elem.sourceImage = [];
+elem.alpha = 1;
 elem.show = false;
-elem.isPeriodic = false;
-elem.window = window;
+elem.window = 'none';
 elem.sigma = [5,5]';
 
-% Map the visual element signal through the below function 'makeLayers' and
-% assign it to the 'layers' field.  When any of the above parameters takes
-% a new value, 'makeLayer' is called, returning the texture layer.
-% 'flattenStruct' returns the same texture layer but with all fields
-% containing signals replaced by their current value. The 'layers' field
-% is loaded by VIS.DRAW
+% Map the visual element signal through the below function 'makeLayer' and
+% assign it to the layers field.  When any of the above parameters takes a
+% new value, makeLayer is called, returning the texture layer.
+% flattenStruct returns the same texture layer but with all fields
+% containing signals replaced by their current value.  It is this field
+% that is loaded by VIS.DRAW
 elem.layers = elem.map(@makeLayers).flattenStruct();
 
+% Deal with texture naming
+persistent imageNum
+name = sprintf('image%i',imageNum);
+% If source image is given as an input, update the visual element
+if nargin > 1
+  % If the image is a char array, assume it is a path and attempt to load
+  % the image.  If there's a transparency layer, use it.
+  if isa(sourceImage, 'char')
+    [~,filename,~] = fileparts(sourceImage);
+    name = sprintf('%s',filename); 
+    [elem.sourceImage, ~, srcAlpha] = imread(sourceImage);
+    if ~isempty(srcAlpha); elem.alpha = srcAlpha; end
+  elseif isobject(sourceImage) % Assume Signal
+    name = sourceImage.Name;
+    elem.sourceImage = sourceImage;
+  else
+    elem.sourceImage = sourceImage;
+  end
+end
+% If input alpha is none-empty, overwrite whatever was returned by imread.
+if nargin > 2 && ~isempty(alpha); elem.alpha = alpha; end
+imageNum = iff(isempty(imageNum), 1, imageNum + 1);
+elem.Name = name;
+
   function layers = makeLayers(newelem)
-    clear elem t; % eliminate references to unused outer variables
-    % make an image layer
+    %% make an image layer
     imgLayer = vis.emptyLayer();
-    % If 'sourceImage' field is empty, return an empty layer
+    % If sourceImage field is empty, return an empty layer
     if isempty(newelem.sourceImage)
       layers = imgLayer;
       return
@@ -97,36 +108,23 @@ elem.layers = elem.map(@makeLayers).flattenStruct();
     imgLayer.texOffset = [newelem.azimuth, newelem.altitude];
     imgLayer.texAngle = newelem.orientation;
     imgLayer.size = newelem.dims;
-    imgLayer.isPeriodic = newelem.isPeriodic;
-    imgLayer.textureId = 'image';
+    imgLayer.isPeriodic = newelem.repeat;
     imgLayer.interpolation = 'linear';
-    imgLayer.maxColour = [newelem.colour(:); 1];
     
-    % Convert the texture image to the correct format - a column vector of
-    % RGBA values between 0 and 255. Output the image size to the
-    % 'rgbaSize' field
     if isobject(newelem.sourceImage)
-      if newelem.rescale
-        imgLayer.rgba = map(newelem.sourceImage,...
-          @(img)vis.rgbaFromUint8(rescale(img),1));
-      else
-        imgLayer.rgba = map(newelem.sourceImage, @(img)vis.rgba(img,1));
-      end
+      % FIXME Make vis.rgba a Signal method or define new image subclass? 
+      imgLayer.textureId = ['~',name];
+      imgLayer.rgba = map(newelem.sourceImage, @(img)vis.rgba(img,1));
       imgLayer.rgbaSize = map(newelem.sourceImage,...
         @(img)[size(img,2), size(img,1)]);
     else
-      if newelem.rescale
-        [imgLayer.rgba, imgLayer.rgbaSize] = ...
-          vis.rgbaFromUint8(rescale(newelem.sourceImage),1);
-      else
-        [imgLayer.rgba, imgLayer.rgbaSize] = ...
-          vis.rgba(newelem.sourceImage,1);
-      end
+      imgLayer.textureId = name;
+      [imgLayer.rgba, imgLayer.rgbaSize] = ...
+        vis.rgba(newelem.sourceImage, newelem.alpha);
     end
-    
     imgLayer.show = newelem.show;
     
-    % make a stencil layer using a window of the specified type
+    %% make a stencil layer using a window of the specified type
     if ~strcmpi(newelem.window, 'none')
       switch lower(newelem.window)
         case {'gaussian' 'gauss'}
@@ -144,9 +142,5 @@ elem.layers = elem.map(@makeLayers).flattenStruct();
       winLayer = [];
     end
     layers = [winLayer, imgLayer];
-  end
-  function img = rescale(img)
-    img = max(img,-1); img = min(img, 1);
-    img = uint8(img*128+128);
   end
 end

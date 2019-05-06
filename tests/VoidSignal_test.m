@@ -1,16 +1,20 @@
 classdef VoidSignal_test < matlab.unittest.TestCase
   
   properties
+    % Handle to VoidSignal object
     Instance
+    % Handle to VoidSignal object that will cache its subsrefs
     CachedInstance
   end
   
   methods (TestClassSetup)
     function createVoids(testCase)
+      % Store two instances of the VoidSignal class
       testCase.Instance = sig.void;
       testCase.CachedInstance = sig.void(true);
       testCase.assertTrue(isa(testCase.Instance, 'sig.VoidSignal'))
       testCase.assertTrue(isa(testCase.CachedInstance, 'sig.VoidSignal'))
+      % Ensure both instances are not the identical
       testCase.assertTrue(~builtin('isequal', testCase.Instance, testCase.CachedInstance))
     end
   end
@@ -19,7 +23,7 @@ classdef VoidSignal_test < matlab.unittest.TestCase
     function test_coverage(testCase)
       % Ensure all methods are covered by VoidSignal class
       sigFcns = unique([methods('sig.Signal');methods('sig.node.Signal')]);
-      voidFcns = methods('sig.VoidSignal');
+      voidFcns = methods('sig.VoidSignal'); % List methods
       ignore = {'Signal', 'applyTransferFun', 'node', 'valueChanged'};
       missing = setdiff(setdiff(sigFcns, voidFcns), ignore);
       testCase.verifyEmpty(missing, ...
@@ -28,7 +32,7 @@ classdef VoidSignal_test < matlab.unittest.TestCase
     end
     
     function test_methods(testCase)
-      % Check all methods return the same instance of the void signal
+      % Check all methods return the same instance of the void signal.
       validateFcn = @(obj)builtin('isequal', testCase.Instance, obj);
       ignre = {'subsref', 'subsasgn', 'onValue', 'instance', 'listener', 'notify'...
         'addlistener', 'output', 'findprop', 'findobj', 'delete', 'isvalid'};
@@ -56,8 +60,32 @@ classdef VoidSignal_test < matlab.unittest.TestCase
       s = testCase.CachedInstance;
       s.one;
       s.three = s.two * 5;
-      
+      % Check subscripts 'one' and 'two' were recorded
       testCase.verifyTrue(isequal(fieldnames(s.Subscripts), {'one'; 'two'}));
+    end
+    
+    function test_subsref(testCase)
+      % Test various weird and wonderful subscript references
+      % TODO As of 19.03.19 "A(I:end)" and "A.map(I).J" throw errors
+      % @body Check these work with standard Signals objects.  If so, the
+      % VoidSignal class should be updated, otherwise we may wish to
+      % consider implementing these.
+      [A, I, J] = deal(testCase.Instance); % Assign voids to vars
+      validateFcn = @(obj)builtin('isequal', testCase.Instance, obj);
+      fn = {@()A('key'), @()A(4), @()A(I), @()A.I, @()A.I.J, @()A(1:4), ...
+        @()A{I}, @()A{I}, @()A{I.J}, @()A{I(end)}, @()A(I).J, @()A(I,J), ...
+        @()A(I,J,I), @()A(:,I)};
+      
+      for i = 1:length(fn)
+        try % Test each subsref
+          void = feval(fn{i});
+        catch % If there's an error set void is nil
+          void = nil;
+        end
+        sref = strrep(func2str(fn{i}), '@()', '');
+        testCase.verifyTrue(validateFcn(void), ...
+          sprintf('subsref "%s" failed to return void signal', sref))
+      end
     end
   end
   

@@ -1,178 +1,89 @@
-% vis.image test
-
-% For each possible type of vis.image, make sure that:
-% a) the image gets defined correctly
-% b) the image can be assigned as a field to a StructRef 
-%   (this mimics the assignment of a visual stimulus to the visual stimuli
-%   subscriptable signal handler in an exp def)
-% c) the image can have it's fields changed via assignment and/or signal 
-%    updates
-%    (this mimics using a parameter in an exp def to parametrize a
-%    visual stimulus by changing a field(s) of that stimulus)
-% d) the values posted to vector fields of the image element can be
-%     assigned as either column or row vectors
-
-% preconditions:
+% preconditions
 net = sig.Net;
-t = net.origin('t');
+t = net.origin('testNode');
+testImages = load('imdemos.mat');
 
-%% Test 1: no image or window (returns an empty layer)
+%% Test 1: Rescale MATLAB double array
+img = double(testImages.circles);
+elem = vis.image(t, img);
+layer = elem.Node.CurrValue.layers.Node.CurrValue;
 
-% a)
-elem = vis.image(t);
-assert(isobject(elem));
-assert(isempty(elem.Node.CurrValue.sourceImage));
+assert(isequal(img, elem.Node.CurrValue.sourceImage), ...
+  'Source image incorrectly assigned')
+assert(strcmp(elem.Node.CurrValue.window, 'none'), 'Unexpected window value')
+assert(layer.textureId(1) ~= '~', 'Texture should be static')
+assert(isequal(layer.rgbaSize, size(img)), 'Size incorrect')
+assert(isa(layer.rgba, 'uint8'), 'incorrect data type')
+assert(isequal(size(layer.rgba), [prod([size(img) 4]) 1]), 'incorrect size')
 
-% b)
-visStim = StructRef;
-visStim.elem = elem;
-assert(isobject(visStim));
+%% Test 2: Source image defined as a path
+img = imread('cell.tif');
+elem = vis.image(t, 'cell.tif');
+layer = elem.Node.CurrValue.layers.Node.CurrValue;
 
-%% Test 2: image as numeric array
+assert(isequal(img, elem.Node.CurrValue.sourceImage), ...
+  'Source image incorrectly assigned')
+assert(layer.textureId(1) ~= '~', 'Texture should be static')
+assert(isequal(layer.rgbaSize, fliplr(size(img))), 'Size incorrect')
+assert(isa(layer.rgba, 'uint8'), 'incorrect data type')
+assert(isequal(size(layer.rgba), [prod([size(img) 4]) 1]), 'incorrect size')
 
-% a)
-sourceImageStruct = load(fullfile(fileparts(which('addSignalsPaths')),...
-  '\tests\fixtures\data\img.mat'), 'img');
-sourceImage = sourceImageStruct.img;
-elem = vis.image(t, sourceImage);
-assert(isobject(elem));
+%% Test 3: Source image as Signal
+img = net.origin('image');
+elem = vis.image(t, img);
+img.post(testImages.pepper)
+layer = elem.Node.CurrValue.layers.Node.CurrValue;
 
-% b)
-visStim = StructRef;
-visStim.elem = elem;
-assert(isobject(visStim));
+assert(isequal(img, elem.Node.CurrValue.sourceImage), ...
+  'Source image incorrectly assigned')
+assert(layer.textureId(1) == '~', 'Texture should be dynamic')
+assert(isequal(layer.rgbaSize, size(img.Node.CurrValue)), 'Size incorrect')
+assert(isa(layer.rgba, 'uint8'), 'incorrect data type')
+assert(isequal(size(layer.rgba), [prod([size(img.Node.CurrValue) 4]) 1]), 'incorrect size')
 
-% c)
-pars = net.subscriptableOrigin('pars');
-elem.colour = pars.elemColour;
-elem.dims = pars.elemDims;
-elem.show = true;
-parsStruct = struct;
-parsStruct.elemColour = [0 0 0];
-parsStruct.elemDims = [20 20];
+%% Test 4: Check alpha loaded correctly
+% Loads an RGBA file where sourceImage is an m by n by 3 array
+pth = fullfile(matlabroot,'toolbox','images','icons','ruler_24.png');
+[img,~,alpha] = imread(pth);
+sz = [size(img,1) size(img,2)];
+elem = vis.image(t, pth);
+layer = elem.Node.CurrValue.layers.Node.CurrValue;
 
-% can't use method call via dot notation on 'pars' b/c 'subsref' is overloaded for 'SubscriptableSignal' 
-post(pars, parsStruct);
+assert(isequal(img, elem.Node.CurrValue.sourceImage), ...
+  'Source image incorrectly assigned')
+assert(layer.textureId(1) ~= '~', 'Texture should be static')
+assert(isequal(layer.rgbaSize, sz), 'Size incorrect')
+assert(isa(layer.rgba, 'uint8'), 'incorrect data type')
+assert(isequal(size(layer.rgba), [prod([sz 4]) 1]), 'incorrect size')
+test_alpha = reshape(layer.rgba(4:4:length(layer.rgba)), size(alpha));
+assert(isequal(alpha, test_alpha), 'alpha incorrectly set')
 
-% assert elem's colour, dims, and layer values
-assert(isequal(elem.Node.CurrValue.colour.Node.CurrValue, [0 0 0]));
-assert(isequal(elem.Node.CurrValue.dims.Node.CurrValue, [20 20]));
-% all vectors in 'layers' struct should be column vectors
-assert(isequal(elem.Node.CurrValue.layers.Node.CurrValue.maxColour, [0 0 0 1]'));
+%% Test 5: Test windowing & position parameters
+pars = num2cell(rand(1,3));
+dims = randi(100,1,2);
+elem = vis.image(t, 'cell.tif');
+elem.window = 'gauss';
+[elem.azimuth, elem.altitude, elem.orientation] = pars{:};
+elem.dims = dims;
+l = elem.Node.CurrValue.layers.Node.CurrValue;
 
-% d)
-% change parsStruct values to column vectors, and re-assert
-parsStruct.elemColour = [0 0 0]';
-parsStruct.elemDims = [20 20]';
-post(pars, parsStruct);
+% Check gaussian stencil
+assert(numel(l)==2, 'unexpected number of texture layers')
+assert(strcmp(l(1).textureId, 'gaussianStencil'), 'unexpected layer order')
+assert(isequal(l(1).texOffset, [pars{1:2}]'), 'unexpected stencil offset') % TODO shape of size and texOffset arrays inconsistent
+% Check parameters were set correctly
+correct = isequal([l(2).texOffset l(2).texAngle l(2).size], [pars{:} dims]);
+assert(correct, 'inconsistent layer parameters')
 
-assert(isequal(elem.Node.CurrValue.colour.Node.CurrValue, [0 0 0]'));
-assert(isequal(elem.Node.CurrValue.dims.Node.CurrValue, [20 20]'));
-% all vectors in 'layers' struct should still be column vectors
-assert(isequal(elem.Node.CurrValue.layers.Node.CurrValue.maxColour, [0 0 0 1]'));
+%% Test 6: Test texture id names
+clear image
+elem1 = vis.image(t, 'cell.tif');
+elem2 = vis.image(t, magic(6));
+elem3 = vis.image(t);
+elem3.sourceImage = randi(240);
+elem4 = vis.image(t, t.map(@(i)randi(floor(i))));
 
-%% Test 3: image as standard image file
-
-% a)
-sourceImage = fullfile(fileparts(which('addSignalsPaths')),...
-  '\tests\fixtures\data\img.jpg');
-elem = vis.image(t, sourceImage);
-assert(isobject(elem));
-
-% b)
-visStim = StructRef;
-visStim.elem = elem;
-assert(isobject(visStim));
-
-% c)
-pars = net.subscriptableOrigin('pars');
-elem.colour = pars.elemColour;
-elem.dims = pars.elemDims;
-elem.show = true;
-parsStruct = struct;
-parsStruct.elemColour = [0 0 0];
-parsStruct.elemDims = [20 20];
-
-% can't use method call via dot notation on 'pars' b/c 'subsref' is overloaded for 'SubscriptableSignal' 
-post(pars, parsStruct);
-
-% assert elem's colour, dims, and layer values
-assert(isequal(elem.Node.CurrValue.colour.Node.CurrValue, [0 0 0]));
-assert(isequal(elem.Node.CurrValue.dims.Node.CurrValue, [20 20]));
-% all vectors in 'layers' struct should be column vectors
-assert(isequal(elem.Node.CurrValue.layers.Node.CurrValue.maxColour, [0 0 0 1]'));
-
-% d)
-% change parsStruct values to column vectors, and re-assert
-parsStruct.elemColour = [0 0 0]';
-parsStruct.elemDims = [20 20]';
-post(pars, parsStruct);
-
-assert(isequal(elem.Node.CurrValue.colour.Node.CurrValue, [0 0 0]'));
-assert(isequal(elem.Node.CurrValue.dims.Node.CurrValue, [20 20]'));
-% all vectors in 'layers' struct should still be column vectors
-assert(isequal(elem.Node.CurrValue.layers.Node.CurrValue.maxColour, [0 0 0 1]'));
-%% Test 4: gaussian window
-
-% a)
-sourceImage = 255*ones(250,250); window = 'gaussian';
-elem = vis.image(t, sourceImage, window);
-assert(isobject(elem));
-
-% b)
-visStim = StructRef;
-visStim.elem = elem;
-assert(isobject(visStim));
-
-% c)
-pars = net.subscriptableOrigin('pars');
-elem.colour = pars.elemColour;
-elem.dims = pars.elemDims;
-elem.sigma = pars.elemSigma;
-elem.show = true;
-parsStruct = struct;
-parsStruct.elemColour = [0 0 0];
-parsStruct.elemDims = [20 20];
-parsStruct.elemSigma = [10 10];
-
-% can't use method call via dot notation on 'pars' b/c 'subsref' is overloaded for 'SubscriptableSignal' 
-post(pars, parsStruct);
-
-% assert elem's colour, dims, and layer values
-assert(isequal(elem.Node.CurrValue.colour.Node.CurrValue, [0 0 0]));
-assert(isequal(elem.Node.CurrValue.dims.Node.CurrValue, [20 20]));
-assert(isequal(elem.Node.CurrValue.sigma.Node.CurrValue, [10 10]));
-% all vectors in 'layers' struct should be column vectors
-assert(isequal(elem.Node.CurrValue.layers.Node.CurrValue(2).maxColour, [0 0 0 1]'));
-assert(strcmpi(elem.Node.CurrValue.layers.Node.CurrValue(1).textureId, 'gaussianStencil'));
-
-% d)
-% change parsStruct values to column vectors, and re-assert
-parsStruct.elemColour = [0 0 0]';
-parsStruct.elemDims = [20 20]';
-post(pars, parsStruct);
-
-assert(isequal(elem.Node.CurrValue.colour.Node.CurrValue, [0 0 0]'));
-assert(isequal(elem.Node.CurrValue.dims.Node.CurrValue, [20 20]'));
-% all vectors in 'layers' struct should still be column vectors
-assert(isequal(elem.Node.CurrValue.layers.Node.CurrValue(2).maxColour, [0 0 0 1]'));
-%% Test 5: impossible image
-
-sourceImage = 'n/a';
-
-try 
-  vis.image(t,sourceImage);
-catch ex
-  assert(strcmpi(class(ex), 'MException'));
-end
-
-%% Test 6: impossible window
-
-sourceImage = 255*ones(250,250);
-window = 'n/a';
-
-try 
-  vis.image(t,sourceImage, window);
-catch ex
-  assert(strcmpi(ex.identifier, 'window:error'));
-end
+names = cellfun(@(n)n.Node.CurrValue.layers.Node.CurrValue.textureId, ...
+  {elem1, elem2, elem3, elem4}, 'UniformOutput', false);
+expected = {'cell', 'image1', 'image2', '~testNode.map(@(i)randi(floor(i)))'};
+assert(isequal(names, expected), 'unexpected texture ids')

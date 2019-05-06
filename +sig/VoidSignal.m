@@ -59,7 +59,7 @@ classdef VoidSignal < sig.Signal
       s = this;
     end
     
-    function h = onValue(this, fun)
+    function h = onValue(this, fun, varargin)
       h = TidyHandle.empty;
     end
     

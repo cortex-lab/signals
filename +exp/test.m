@@ -35,7 +35,8 @@ parsStruct.expRef = dat.constructExpRef('fake', now, 1);
 %% boring UI stuff
 parsWindow = figure('Name', sprintf('%s', expdefname),...
   'NumberTitle', 'off', 'Toolbar', 'none', 'Menubar', 'none',...
-  'Position', [800 550 800 580]);
+  'Units', 'normalized');
+parsWindow.OuterPosition = [0.5 0.2 0.4 0.6];
 mainsplit = uiextras.HBox('Parent', parsWindow);
 leftbox = uiextras.VBox('Parent', mainsplit);
 
@@ -70,10 +71,12 @@ leftbox.Sizes = [-1 100];
 % leftbox.Sizes = [-1 30 25];
 % parslist = addlistener(parsEditor, 'Changed', @appl);
 %% experiment framework
-[t, setElems, curser] = sig.playgroundPTB(expdefname, ctrlgrid);
+[t, setElems] = sig.playgroundPTB(expdefname, ctrlgrid);
 % mainsplit.Sizes = [700 -1]; 
 net = t.Node.Net;
 % inputs & outputs
+curser = net.origin('curser');
+
 inputs = sig.Registry;
 wx = net.fromUIEvent(wheelslider);
 inputs.wheel = net.origin('wheel');
@@ -107,6 +110,7 @@ listeners = [
   evts.endTrial.into(advanceTrial) %endTrial signals advance
   advanceTrial.map(true).keepWhen(hasNext).into(evts.newTrial) %newTrial if more
   evts.trialNum.onValue(setCtrlStr(trialNumCtrl))
+  t.onValue(@(~)post(curser, GetMouse())); % post mouse into curser
   curser.into(inputs.wheel)
 %   wx.onValue(@(e)post(inputs.wheel,e.Source.Value))
 %   wx.onValue(@(e)set(e.Source,'Min', e.Source.Value - 50, 'Max', e.Source.Value + 50))
@@ -118,7 +122,10 @@ if isfield(outputs, 'reward') % TODO display all outputs in UI
 end
 
 % plotting the signals
-sigsFig = figure('Name', 'LivePlot', 'NumberTitle', 'off', 'Color', 'w'); 
+sigsFig = figure('Name', 'LivePlot', 'NumberTitle', 'off', ...
+  'Color', 'w', 'Units', 'normalized'); 
+sigsFig.OuterPosition = [0.6 0.2 0.4 1];
+
 sig.timeplot(t, evts, 'parent', sigsFig, 'mode', 0, 'tWin', 60);
 
   function applyPars(~,~)
@@ -140,5 +147,8 @@ sig.timeplot(t, evts, 'parent', sigsFig, 'mode', 0, 'tWin', 60);
     inputs.wheel.post(get(src, 'Value'));
   end
  
+  function toggleWheelInput(src, ~)
+    
+  end
 
 end
