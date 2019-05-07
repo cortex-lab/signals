@@ -56,14 +56,14 @@ function elem = image(t, sourceImage, alpha)
 elem = t.Node.Net.subscriptableOrigin('image');
 elem.azimuth = 0;
 elem.altitude = 0;
-elem.dims = [50,50];
+elem.dims = [50,50]';
 elem.orientation = 0;
 elem.repeat = false;
 elem.sourceImage = [];
 elem.alpha = 1;
 elem.show = false;
 elem.window = 'none';
-elem.sigma = [5,5];
+elem.sigma = [5,5]';
 
 % Map the visual element signal through the below function 'makeLayer' and
 % assign it to the layers field.  When any of the above parameters takes a
