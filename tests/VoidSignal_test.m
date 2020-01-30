@@ -82,7 +82,7 @@ classdef VoidSignal_test < matlab.unittest.TestCase
         catch % If there's an error set void is nil
           void = nil;
         end
-        sref = strrep(func2str(fn{i}), '@()', '');
+        sref = erase(func2str(fn{i}), '@()');
         testCase.verifyTrue(validateFcn(void), ...
           sprintf('subsref "%s" failed to return void signal', sref))
       end
