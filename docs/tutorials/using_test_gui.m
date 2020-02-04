@@ -75,7 +75,8 @@ help eui.SignalsTest/setOptions
 % experiment panel (ExpPanel) that displays Signals updates after the
 % experiment has started.  A custom ExpPanel can be defined via your
 % expDef's 'expPanelFun' parameter, otherwise |eui.SignalsExpPanel| is
-% used.  For more info, see <./using_ExpPanel.html Using ExpPanel>.
+% used.  Note that unlike in |MC|, the comments box is hidden from the
+% panel.  For more info, see <./using_ExpPanel.html Using ExpPanel>.
 
 %% Debugging
 % A number of features make debugging a little easier:
