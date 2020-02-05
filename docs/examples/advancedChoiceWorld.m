@@ -116,16 +116,13 @@ nextCondition = feedback > 0 | p.repeatIncorrect == false;
 evts.stimulusOn = stimulusOn;
 evts.preStimulusDelay = preStimulusDelay;
 % save the contrasts as a difference between left and right
-evts.contrast = p.stimulusContrast.map(@diff); 
+% evts.contrast = p.stimulusContrast.map(@diff); 
 evts.contrastLeft = contrastLeft;
 evts.contrastRight = contrastRight;
 evts.azimuth = azimuth;
 evts.response = response;
 evts.feedback = feedback;
 evts.interactiveOn = interactiveOn;
-% Accumulate reward signals and append microlitre units
-volumeUnits = @(v)sprintf('%.1f%cl', v, char(956));
-evts.totalReward = out.reward.scan(@plus, 0).map(volumeUnits); 
 
 % Trial ends when evts.endTrial updates.  
 % If the value of evts.endTrial is false, the current set of conditional

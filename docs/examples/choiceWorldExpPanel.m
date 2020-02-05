@@ -1,20 +1,19 @@
-classdef advancedChoiceWorldExpPanel < eui.SignalsExpPanel
-  % UI control for monitoring advancedChoiceWorld
-  %   A UI panel that plots experiment updates specific to the
-  %   advancedChoiceWorld signals experiment definition.  Plots a
-  %   psychometric curve for each of the three response types, along with
-  %   a simulation of the current stimulus window and stimulus position
-  %   with respect to the response thresholds.
-  %
-  % See also eui.SignalsExpPanel
+classdef choiceWorldExpPanel < eui.SignalsExpPanel
+  %eui.SignalsExpPanel Basic UI control for monitoring an experiment
+  %   TODO
   %
   % Part of Rigbox
-    
-  properties (Access = private)
-    RewardUnits = sprintf('%cl', char(956)) % Units of the reward output
+  
+  properties
+    % Trials per minute window size
+    WindowSize = 20
+    RewardUnits = sprintf('%cl', char(956))
+  end
+  
+  properties (Access = protected)
     PsychometricAxes % Handle to axes of psychometric plot
     ExperimentAxes % Handle to axes of wheel trace and threhold line plot
-    ExperimentHands % Handles to plot objects in the experiment axes
+    ExperimentHands % handles to plot objects in the experiment axes
     ScreenAxes
     ScreenHands
     VelAxes
@@ -26,8 +25,13 @@ classdef advancedChoiceWorldExpPanel < eui.SignalsExpPanel
     lastEvtTime = now;
   end
   
+  properties (Access = protected, SetObservable)
+    contrastLeft = []
+    contrastRight = []
+  end
+  
   methods
-    function obj = advancedChoiceWorldExpPanel(parent, ref, params, logEntry)
+    function obj = choiceWorldExpPanel(parent, ref, params, logEntry)
       obj = obj@eui.SignalsExpPanel(parent, ref, params, logEntry);
       % Initialize InputSensor properties for speed
       obj.InputSensorPos = nan(1000*30, 1);
@@ -36,21 +40,37 @@ classdef advancedChoiceWorldExpPanel < eui.SignalsExpPanel
       obj.Block.numCompletedTrials = -1; % Store sum of events.newTrial
       obj.Block.totalReward = 0; % Store sum of outputs.reward event here
       obj.Block.trial = struct('contrastLeft', [], 'contrastRight', [], ...
-        'response', [], 'repeatNum', [], 'feedback', [], 'pars', []);
-      % Set which events we wish to display as info fields
-      exclude = ["inputs.wheelDeg", "events.expStart", "events.newTrial", "events.contrast"];
-      obj.UpdatesFilter = [obj.UpdatesFilter, exclude];
-      % Prettify the InfoLabels
-      obj.FormatLabels = true;
+        'response', [], 'repeatNum', [], 'feedback', [],...
+        'wheelGain', [], 'newTrialTimes', [], ...
+        'baselineRT', [], 'windowedRT', [], 'tMin', []);
       % Add our reward info field.  Unlike TrialCountLabel we keep this in
       % the LabelsMap so that it updates green when changing
       obj.LabelsMap('outputs.reward') = obj.addInfoField('Reward', ['0 ' obj.RewardUnits]);
       set(obj.LabelsMap('outputs.reward'), 'UserData', clock);
+      % Set which events we wish to display as info fields
+      obj.UpdatesFilter = [
+        "events.repeatNum", ...
+        "events.disengaged", ...
+        "events.pctDecrease", ...
+        "events.proportionLeft", ...
+        "inputs.lick", ...
+        "events.prestimQuiescentPeriod"];
+      obj.Exclude = false; % Include only those in the UpdatesFilter list
+      % Prettify the InfoLabels
+      obj.FormatLabels = true;
+      obj.Listeners = [obj.Listeners,...
+        addlistener(obj,'contrastLeft','PostSet',@obj.setContrast), ...
+        addlistener(obj,'contrastRight','PostSet',@obj.setContrast)];
     end
     
   end
   
   methods (Access = protected)
+    function setContrast(obj, ~, ~)
+      cL = obj.contrastLeft;
+      cR = obj.contrastRight;
+      obj.Parameters.Struct.stimulusContrast = [cL cR];
+    end
     
     function processUpdates(obj)
       updates = obj.SignalUpdates(1:obj.NumSignalUpdates);
@@ -59,13 +79,11 @@ classdef advancedChoiceWorldExpPanel < eui.SignalsExpPanel
       if ~isempty(updates)
         %fprintf('processing %i signal updates\n', length(updates));
         
-        
         % pull out wheel updates
         allNames = {updates.name};
         wheelUpdates = strcmp(allNames, 'inputs.wheelMM');
         
         if sum(wheelUpdates)>0
-          
           x = -[updates(wheelUpdates).value];
           t = (24*3600*cellfun(@(x)datenum(x), {updates(wheelUpdates).timestamp}))-(24*3600*obj.StartedDateTime);
           
@@ -91,30 +109,29 @@ classdef advancedChoiceWorldExpPanel < eui.SignalsExpPanel
         plotwindow = [-5 1];
         lastidx = obj.InputSensorPosCount;
         
-        if lastidx>0
+        if lastidx > 1
           
           firstidx = find(obj.InputSensorPosTime>obj.InputSensorPosTime(lastidx)+plotwindow(1),1);
           
           xx = obj.InputSensorPos(firstidx:lastidx);
           tt = obj.InputSensorPosTime(firstidx:lastidx);
           
-          set(obj.ExperimentHands.wheelH,...
-            'XData', xx,...
-            'YData', tt);
+          set(obj.ExperimentHands.wheelH, 'XData', xx, 'YData', tt);
           
           set(obj.ExperimentAxes.Handle, 'YLim', plotwindow + tt(end));
-          
-          if numel(xx) > 1
-            % update the velocity tracker too
-            [tt, idx] = unique(tt);
+          % update the velocity tracker too
+          [tt, idx] = unique(tt);
+          if numel(tt) > 1
             recentX = interp1(tt, xx(idx), tt(end)+(-0.3:0.05:0));
             vel = mean(diff(recentX));
-            set(obj.VelHands.Vel, 'XData', vel*[1 1]);
-            obj.VelHands.MaxVel = max(abs([obj.VelHands.MaxVel vel]));
-            set(obj.VelAxes, 'XLim', obj.VelHands.MaxVel*[-1 1]);
+          else
+            vel = 0;
           end
+          set(obj.VelHands.Vel, 'XData', vel*[1 1]);
+          obj.VelHands.MaxVel = max(abs([obj.VelHands.MaxVel vel]));
+          set(obj.VelAxes, 'XLim', obj.VelHands.MaxVel*[-1 1]);
+          
         end
-        
         
         % now deal with other updates
         updates = updates(~wheelUpdates);
@@ -129,81 +146,103 @@ classdef advancedChoiceWorldExpPanel < eui.SignalsExpPanel
           obj.PsychometricAxes.clear();
           if obj.Block.numCompletedTrials > 2
             psy.plot2AUFC(obj.PsychometricAxes.Handle, obj.Block);
+            contrast = diff(obj.Parameters.Struct.stimulusContrast)*100;
+            obj.PsychometricAxes.plot(repmat(contrast,1,2),[0 100],'k:')
           end
           
           % make sure we have all necessary data about new trial
           assert(all(ismember(...
-            {'events.trialNum', 'events.repeatNum', 'pars'}, allNames)), ...
+            {'events.trialNum', 'events.repeatNum'}, allNames)), ...
             'exp panel did not find all the required data about the new trial!');
           
           % pull out the things we need to keep
           trNum = updates(strcmp(allNames, 'events.trialNum')).value;
-          %assert(trNum==obj.Block.numCompletedTrials+1, 'trial number doesn''t match');
+          % save the trial time
+          %  trT = cellfun(@datenum,{updates(strcmp(allNames, 'events.trialNum')).timestamp});
+          obj.Block.trial(end+1).newTrialTimes = datenum(updates(strcmp(allNames, 'events.trialNum')).timestamp);
           if ~(trNum==obj.Block.numCompletedTrials+1)
             fprintf(1, 'trial number mismatch: %d, %d\n', trNum, obj.Block.numCompletedTrials+1);
             obj.Block.numCompletedTrials = trNum-1;
           end
-          
           obj.Block.trial(trNum).repeatNum = ...
             updates(strcmp(allNames, 'events.repeatNum')).value;
-          
-          p = updates(strcmp(allNames, 'pars')).value;
-          obj.Block.trial(trNum).pars = p;
-          cL = p.stimulusContrast(1); cR = p.stimulusContrast(2);
-          obj.Block.trial(trNum).contrastLeft = cL;
-          obj.Block.trial(trNum).contrastRight = cR;
-          
         end
         
         
         for ui = 1:length(updates)
           signame = updates(ui).name;
           switch signame
-            
+            case 'events.contrastLeft'
+              % Store the left contrast value for use in the wheel and
+              % psychometric plots.
+              cL = updates(ui).value;
+              idx = find(datenum(updates(ui).timestamp) > [obj.Block.trial.newTrialTimes], 1, 'last')+1;
+              obj.Block.trial(idx).contrastLeft = cL;
+              obj.contrastLeft = cL;
+            case 'events.contrastRight'
+              % Store the right contrast value for use in the wheel and
+              % psychometric plots.
+              cR = updates(ui).value;
+              idx = find(datenum(updates(ui).timestamp) > [obj.Block.trial.newTrialTimes], 1, 'last')+1;
+              obj.Block.trial(idx).contrastRight = cR;
+              obj.contrastRight = cR;
+            case 'events.wheelGain'
+              % Store the wheel gain value for use with the wheel plot
+              idx = find(datenum(updates(ui).timestamp) > [obj.Block.trial.newTrialTimes], 1, 'last')+1;
+              obj.Block.trial(idx).wheelGain = updates(ui).value;
             case 'events.interactiveOn'
+              % Start of interactive period means we must update the wheel
+              % axes to show the thresholds and to colour the correct side
+              % green.
               
               % re-set the response window starting now
               ioTime = (24*3600*datenum(updates(ui).timestamp))-(24*3600*obj.StartedDateTime);
               
-              p = obj.Block.trial(end).pars;
-              cL = p.stimulusContrast(1); cR = p.stimulusContrast(2);
-              
-              % update wheel plot to show thresholds
-              if cL>0 && cL>cR
-                colorL = 'g'; colorR = 'r';
-              elseif cL>0 && cL==cR
-                colorL = 'g'; colorR = 'g';
-              elseif cR>0
-                colorL = 'r'; colorR = 'g';
-              else
-                colorL = 'r'; colorR = 'r';
-              end
-              
-              respWin = p.responseWindow; if respWin>1000; respWin = 1000; end
-              
-              th = p.stimulusAzimuth/p.wheelGain;
+              p = obj.Parameters.Struct;
+              respWin = Inf; if respWin>1000; respWin = 1000; end
+              % Due to the order of the updates, we look for the gain of
+              % the previous trial.
+              gain = getOr(obj.Block.trial(end-1), 'wheelGain', p.normalGain);
+              th = p.responseDisplacement/gain;
               startPos = obj.InputSensorPos(find(obj.InputSensorPosTime<ioTime,1,'last'));
               if isempty(startPos); startPos = obj.InputSensorPos(obj.InputSensorPosCount); end % for first trial
               tL = startPos-th;
               tR = startPos+th;
               
-              set(obj.ExperimentHands.threshL, 'Color', colorL, ...
+              set(obj.ExperimentHands.threshL, ...
                 'XData', [tL tL], 'YData', ioTime+[0 respWin]);
-              set(obj.ExperimentHands.threshR, 'Color', colorR, ...
+              set(obj.ExperimentHands.threshR, ...
                 'XData', [tR tR], 'YData', ioTime+[0 respWin]);
               
               yd = get(obj.ExperimentHands.threshLoff, 'YData');
               set(obj.ExperimentHands.threshLoff, 'XData', [tL tL], 'YData', [yd(1) ioTime]);
               set(obj.ExperimentHands.threshRoff, 'XData', [tR tR], 'YData', [yd(1) ioTime]);
               
+              cL = obj.contrastLeft;
+              cR = obj.contrastRight;
+              if ~isempty(cL)&&~isempty(cR)
+                if cL>0 && cL>cR
+                  colorL = 'g'; colorR = 'r';
+                elseif cL>0 && cL==cR
+                  colorL = 'g'; colorR = 'g';
+                elseif cR>0
+                  colorL = 'r'; colorR = 'g';
+                elseif isnan(cL)||isnan(cR)
+                  colorL = 'k'; colorR = 'k';
+                else
+                  colorL = 'r'; colorR = 'r';
+                end
+                set(obj.ExperimentHands.threshL, 'Color', colorL);
+                set(obj.ExperimentHands.threshR, 'Color', colorR);
+              end
               obj.ExperimentAxes.XLim = startPos+1.5*th*[-1 1];
               
             case 'events.stimulusOn'
-              
-              p = obj.Block.trial(end).pars;
+              % Update the wheel axes to reflect the stimulus appearing
+              p = obj.Parameters.Struct;
               soTime = (24*3600*datenum(updates(ui).timestamp))-(24*3600*obj.StartedDateTime);
-              
-              th = p.stimulusAzimuth/p.wheelGain;
+              gain = iff(isempty(obj.Block.trial(end).wheelGain), p.normalGain, obj.Block.trial(end).wheelGain);
+              th = p.responseDisplacement/gain;
               startPos = obj.InputSensorPos(find(obj.InputSensorPosTime<soTime,1,'last'));
               if isempty(startPos); startPos = obj.InputSensorPos(obj.InputSensorPosCount); end % for first trial
               tL = startPos-th;
@@ -220,25 +259,22 @@ classdef advancedChoiceWorldExpPanel < eui.SignalsExpPanel
               set(obj.ExperimentHands.corrIcon, 'XData', 0, 'YData', NaN);
               
               obj.ExperimentAxes.XLim = startPos+1.5*th*[-1 1];
-              
-              if ~isempty(obj.ScreenAxes)
-                % show the visual stimulus
-                [x,y,im] = screenImage(p);
-                set(obj.ScreenHands.Im, 'XData', x, 'YData', y, 'CData', im);
-                caxis(obj.ScreenAxes, [0 255]);
-              end
-              
             case 'events.stimulusOff'
-              if ~isempty(obj.ScreenAxes)
-                set(obj.ScreenHands.Im, 'CData', 127*ones(size(get(obj.ScreenHands.Im, 'CData'))));
-                caxis(obj.ScreenAxes, [0 255]);
-              end
-            case 'events.response'
+              % re-set the response window starting now
+              ioTime = (24*3600*datenum(updates(ui).timestamp))-(24*3600*obj.StartedDateTime);
+              yd = get(obj.ExperimentHands.threshR, 'YData');
+              set(obj.ExperimentHands.threshL, ...
+                'YData', [yd(1) ioTime]);
+              set(obj.ExperimentHands.threshR, ...
+                'YData', [yd(1) ioTime]);
               
+            case 'events.response'
+              % Store the response value for updating the psychometic curve
               obj.Block.trial(obj.Block.numCompletedTrials+1).response = updates(ui).value;
               
             case 'events.feedback'
-              
+              % Store the feedback value for updating the psychometic curve
+              % and plot the feedback icon on the wheel axes plot. 
               obj.Block.trial(obj.Block.numCompletedTrials+1).feedback = updates(ui).value;
               
               fbTime = (24*3600*datenum(updates(ui).timestamp))-(24*3600*obj.StartedDateTime);
@@ -260,17 +296,38 @@ classdef advancedChoiceWorldExpPanel < eui.SignalsExpPanel
                   'YData', NaN);
               end
               
-            case 'events.azimuth'
-              
-              az = updates(ui).value;
-              if ~isempty(obj.ScreenAxes)
-                % trick to move visual stimuli by moving the xlim in the opposite way
-                set(obj.ScreenAxes, 'XLim', -az+[-135 135]); 
-              end
-              
             case 'events.trialNum'
+              % Update the trail count label
               set(obj.TrialCountLabel, ...
                 'String', num2str(updates(ui).value));
+              
+            case {'events.baselineRT', 'events.windowedRT'}
+              % Store the RT values for use in the disengagement plot
+              name = signame(8:end);
+              % value = str2double(strrep(updates(ui).value, ' sec', ''));
+              value = updates(ui).value;
+              obj.Block.trial(obj.Block.numCompletedTrials+1).(name) = value;
+              
+            case 'events.newTrial'
+              % Update RT plot at the start of each new trial
+              trialTimes = [obj.Block.trial.newTrialTimes];
+              N = obj.WindowSize;
+              if length(trialTimes) > N
+                tMin = 1/(mean(diff(trialTimes(end-N+1:end)))*24*60);
+                p = obj.Parameters.Struct;
+                rtCriterion = p.rtCriterion;
+                baseRT = [obj.Block.trial.baselineRT];
+                winRT = [obj.Block.trial.windowedRT];
+                set(obj.ScreenHands.baseRT, 'XData', 1:length(baseRT), 'YData', baseRT*rtCriterion)
+                startIdx = numel(baseRT)+1-numel(winRT);
+                set(obj.ScreenHands.winRT, 'XData', startIdx:numel(baseRT), 'YData', winRT)
+                tMin = iff(all(isnan(obj.ScreenHands.tMin.YData)), ...
+                  tMin, [obj.ScreenHands.tMin.YData tMin]);
+                set(obj.ScreenHands.tMin, ...
+                  'XData', obj.WindowSize:obj.WindowSize-1+length(tMin), ...
+                  'YData', tMin)
+                obj.ScreenAxes.YLim = [0 max(baseRT(startIdx:end)*rtCriterion)+0.1];
+              end
               
             case 'outputs.reward'
               % Keep track of total reward and display both
@@ -298,49 +355,47 @@ classdef advancedChoiceWorldExpPanel < eui.SignalsExpPanel
         
       end
     end
-        
+    
     function build(obj, parent)
       build@eui.SignalsExpPanel(obj, parent);
       
       % Build the psychometric axes
-      plotgrid = uiextras.VBox('Parent', obj.CustomPanel, 'Padding', 5);
+      plotgrid = uiextras.VBox('Parent', obj.CustomPanel, 'Padding', 5, 'Spacing', 10);
       
-      uiextras.Empty('Parent', plotgrid, 'Visible', 'off');
+      %       uiextras.Empty('Parent', plotgrid, 'Visible', 'off');
       
       obj.PsychometricAxes = bui.Axes(plotgrid);
-      obj.PsychometricAxes.ActivePositionProperty = 'position';
       obj.PsychometricAxes.YLim = [-1 101];
       obj.PsychometricAxes.NextPlot = 'add';
       obj.PsychometricAxes.Title = 'Pyschometric plot';
       obj.PsychometricAxes.xLabel('Contrast');
-      yyaxis(obj.PsychometricAxes.Handle,'left')
+%       yyaxis(obj.PsychometricAxes.Handle,'left')
       set(obj.PsychometricAxes.Handle, 'YColor', [0 .8 .8])
       obj.PsychometricAxes.yLabel('% Leftward');
-      yyaxis(obj.PsychometricAxes.Handle,'right')
-      set(obj.PsychometricAxes.Handle, 'YColor', 'm')
-      obj.PsychometricAxes.yLabel('% Rightward');
+%       yyaxis(obj.PsychometricAxes.Handle,'right')
+%       set(obj.PsychometricAxes.Handle, 'YColor', 'm')
+%       obj.PsychometricAxes.yLabel('% Rightward');
       
-      uiextras.Empty('Parent', plotgrid, 'Visible', 'off');
+      %       uiextras.Empty('Parent', plotgrid, 'Visible', 'off');
       
-      % The function screenImage used for the Screen plot requires the
-      % Image Processing Toolbox.  If this isn't present, deactivate the
-      % axes
-      toolboxes = ver;
-      if isempty(intersect('Image Processing Toolbox', {toolboxes.Name}))
-        % Toolbox not found
-        warning('Rigbox:eui:choiceExpPanel:toolboxRequired', ...
-        'The Image Processing Toolbox is required for full functionality')
-        scH = [];
-      else % Create screen image plot
-        obj.ScreenAxes = axes('Parent', plotgrid);
-        obj.ScreenHands.Im = imagesc(0,0,127);
-        axis(obj.ScreenAxes, 'image');
-        axis(obj.ScreenAxes, 'off');
-        colormap(obj.ScreenAxes, 'gray');
-        scH = -2;
-      end
+      obj.ScreenAxes = bui.Axes(plotgrid);
+      obj.ScreenAxes.NextPlot = 'add';
+      obj.ScreenAxes.Title = 'Reaction time';
+      obj.ScreenAxes.xLabel('# trials');
+      obj.ScreenAxes.yLabel('RT (s)');
+      x = obj.Parameters.Struct.minTrials;
+      plot(obj.ScreenAxes, [x, x], [0, 60], 'k:');
+      obj.ScreenAxes.YLim = [0 5];
+      obj.ScreenHands.winRT = plot(obj.ScreenAxes, nan(1,2), nan(1,2), 'k');
+      obj.ScreenHands.baseRT = plot(obj.ScreenAxes, nan(1,2), nan(1,2), 'r');
+      yyaxis(obj.ScreenAxes.Handle,'right')
+      obj.ScreenHands.tMin = plot(obj.ScreenAxes, nan(1,2), nan(1,2), 'Color', [.8,.8,.8]);
+      obj.ScreenAxes.yLabel('Trials / min');
+      set(obj.ScreenAxes.Handle, 'YColor', [.5,.5,.5])
+      yyaxis(obj.ScreenAxes.Handle,'left')
+      scH = -2;
       
-      uiextras.Empty('Parent', plotgrid, 'Visible', 'off');
+      %       uiextras.Empty('Parent', plotgrid, 'Visible', 'off');
       
       obj.ExperimentAxes = bui.Axes(plotgrid);
       obj.ExperimentAxes.ActivePositionProperty = 'position';
@@ -380,9 +435,8 @@ classdef advancedChoiceWorldExpPanel < eui.SignalsExpPanel
       axis(obj.VelAxes, 'off');
       obj.VelHands.MaxVel = 1e-9;
       
-      set(plotgrid, 'Sizes', [30 -2 30 scH 10 -4 5 -1]);
+      %       set(plotgrid, 'Sizes', [30 -2 30 scH 10 -4 5 -1]);
+      set(plotgrid, 'Sizes', [-2 scH -4 5 -1])
     end
   end
-  
 end
-
