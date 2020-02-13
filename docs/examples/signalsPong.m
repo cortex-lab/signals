@@ -1,22 +1,21 @@
-function signalsPong(t, events, p, visStim, inputs, outputs, audio)
+function signalsPong(t, events, p, visStim, inputs, outputs, ~)
 % SIGNALSPONG runs a simple version of the classic game, pong, in Signals
+%   This exp def runs a fairly simple one-player version of pong. The game
+%   pits the experimenter against a CPU player - the first to reach a
+%   target score wins. The target score is 5 by default, but is treated as
+%   a Signals parameter, and so can be adjusted within the GUI from which
+%   this exp def is launched. During gameplay, the ball's velocity is
+%   constant, and the ball's trajectory changes randomly upon contact with
+%   a paddle or the wall.
 %
-% This exp def runs a fairly simple one-player version of pong. The game
-% pits the experimenter against a CPU player - the first to reach a 
-% target score wins. The target score is 5 by default, but is treated as 
-% a Signals parameter, and so can be adjusted within the GUI from which
-% this exp def is launched. During gameplay, the ball's velocity is
-% constant, and the ball's trajectory changes randomly upon contact with a
-% paddle or the wall.
-%
-% This exp def should be run via the ExpTestPanel GUI (exp.ExpTest)
+%   This exp def should be run via the ExpTestPanel GUI (exp.ExpTest)
 % 
-% Example: 
-%  expTestPanel = exp.ExpTest('signalsPong');
+%   Example: 
+%    eui.SignalsTest('signalsPong');
 %
 % Author: Jai Bhagat - adapted from Andy Peters
 %
-% *Note: The parameters the experimenter can play with are defined and 
+% Note: The parameters the experimenter can play with are defined and 
 % explained at the bottom of this exp def
 
 %% World set-up (points of control)
@@ -169,7 +168,7 @@ gameData = playerPaddleY.scan(@updateGame, gameDataInit).subscriptable;
     if cpuScored, gameData.cpuScore = gameData.cpuScore + 1; end
     
     contactOrScore = wallContact || playerContact || cpuContact... 
-      || playerScored || cpuScored;
+                     || playerScored || cpuScored;
     
     if contactOrScore % update ball angle and ball velocity
       
@@ -252,16 +251,16 @@ events.endTrial = anyScored.then(1);
 endGame = (playerScore == targetScore) | (cpuScore == targetScore);
 events.expStop = endGame.then(1).delay(0.1);
 
-% output to the 'ExpTestPanel' logging display on a score and at game end
-outputs.playerScore = cond(playerScore>0, playerScore.map(@(x)...
-  sprintf('Player 1 Scores! Player 1: %d cpu: %d',...
-  x, cpuScore.Node.CurrValue)));
-outputs.cpuScore = cond(cpuScore>0, cpuScore.map(@(x)...
-  sprintf('cpu Scores! Player 1: %d cpu: %d',...
-  playerScore.Node.CurrValue, x)));
-outputs.gameOver =... 
-  endGame.then(cond(playerScore > cpuScore, sprintf('Game Over! Player 1 Wins!'),... 
-  cpuScore > playerScore, sprintf('Game Over. cpu Wins :('))).delay(0.01);
+% output to the logging display on a score and at game end
+scorerName = merge(playerScore.then("Player 1"), cpuScore.then("CPU"));
+scoreMsg = @(nm,a,b) sprintf('%s Scores! Player 1: %d CPU: %d', nm, a, b);
+outputs.scorecard = anyScored.then(...
+  scorerName.mapn(playerScore, cpuScore, scoreMsg));
+
+gameOverMsg = cond(...
+  playerScore > cpuScore, 'Game Over! Player 1 Wins!',... 
+  cpuScore > playerScore, 'Game Over. cpu Wins :(');
+outputs.gameOver = gameOverMsg.at(endGame);
 
 %% Define the visual elements and the experiment parameters
 
