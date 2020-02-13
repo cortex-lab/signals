@@ -19,7 +19,8 @@ function [x,y,im] = screenImage(varargin)
 %    y (numerical): The vertical Gabor values
 %    im (numerical): The image data
 %
-%  NB: Requires Image Processing Toolbox
+%  NB: Requires Image Processing Toolbox and Statistics And Machine
+%      Learning Toolbox.
 %
 % See also choiceWorldExpPanel
 %

@@ -1,4 +1,5 @@
 function X = exp(lambda, sz, bounds, adjusted)
+% Requires the Statistics And Machine Learning Toolbox
 if nargin < 2; sz = [1, 1]; end
 if nargin < 3; bounds = [0, Inf]; end
 if nargin < 4; adjusted = false; end

@@ -85,7 +85,7 @@ elseif islogical(v)
     s = num2str(v);
   end
 elseif isstruct(v)
-  warning('toStr:isstruct:Unfinished', 'todo: implement toStr on structs');
+  % @todo implement toStr on structs
   s = ['<' strJoin(fieldnames(v), ',') '>'];
 elseif isa(v, 'function_handle')
   s = func2str(v);

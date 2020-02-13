@@ -326,10 +326,13 @@ classdef advancedChoiceWorldExpPanel < eui.SignalsExpPanel
       % Image Processing Toolbox.  If this isn't present, deactivate the
       % axes
       toolboxes = ver;
-      if isempty(intersect('Image Processing Toolbox', {toolboxes.Name}))
-        % Toolbox not found
+      required = {'Image Processing', 'Statistics and Machine Learning'};
+      installed = ismember(strcat(required,' Toolbox'), {toolboxes.Name});
+      if ~all(installed)
+        % Toolbox(es) not found
         warning('Rigbox:eui:choiceExpPanel:toolboxRequired', ...
-        'The Image Processing Toolbox is required for full functionality')
+        'The %s is required for full functionality', ...
+        strjoin(strcat(required(~installed),' Toolbox'), ' and '))
         scH = [];
       else % Create screen image plot
         obj.ScreenAxes = axes('Parent', plotgrid);

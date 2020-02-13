@@ -19,9 +19,9 @@ contrastRight = p.stimulusContrast(2);
 % stimulus should come on after the wheel has been held still for the
 % duration of the preStimulusDelay.  The quiescence threshold is a tenth of
 % the rotary encoder resolution.
-preStimulusDelay = p.preStimulusDelay.map(@timeSampler).at(evts.newTrial); % at(evts.newTrial) fix for rig pre-delay 
+preStimulusDelay = p.preStimulusDelay.map(@rnd.sample).at(evts.newTrial); % at(evts.newTrial) fix for rig pre-delay 
 stimulusOn = sig.quiescenceWatch(preStimulusDelay, t, wheel, 10);
-interactiveDelay = p.interactiveDelay.map(@timeSampler);
+interactiveDelay = p.interactiveDelay.map(@rnd.sample);
 interactiveOn = stimulusOn.delay(interactiveDelay); % the closed-loop period starts when the stimulus comes on, plus an 'interactive delay'
 
 audioDevice = audio.Devices('default');
@@ -128,10 +128,10 @@ evts.interactiveOn = interactiveOn;
 % If the value of evts.endTrial is false, the current set of conditional
 % parameters are used for the next trial, if evts.endTrial updates to true, 
 % the next set of randowmly picked conditional parameters is used
-evts.endTrial = nextCondition.at(stimulusOff).delay(p.interTrialDelay.map(@timeSampler)); 
+evts.endTrial = nextCondition.at(stimulusOff).delay(p.interTrialDelay.map(@rnd.sample)); 
 
 %% Parameter defaults
-% See timeSampler for full details on what values the *Delay paramters can
+% See rnd.sample for full details on what values the *Delay paramters can
 % take.  Conditional perameters are defined as having ncols > 1, where each
 % column is a condition.  All conditional paramters must have the same
 % number of columns.
@@ -165,29 +165,4 @@ p.wheelGain = 5;
 p.preStimulusDelay = [0 0.1 0.09]';
 catch % ex
 %    disp(getReport(ex, 'extended', 'hyperlinks', 'on'))
-end
-
-%% Helper functions
-function duration = timeSampler(time)
-% TIMESAMPLER Sample a time from some distribution
-%  If time is a single value, duration is that value.  If time = [min max],
-%  then duration is sampled uniformally.  If time = [min, max, time const],
-%  then duration is sampled from a exponential distribution, giving a flat
-%  hazard rate.  If numel(time) > 3, duration is a randomly sampled value
-%  from time.
-%
-% See also exp.TimeSampler
-  if nargin == 0; duration = 0; return; end
-  switch length(time)
-    case 3 % A time sampled with a flat hazard function
-      duration = time(1) + exprnd(time(3));
-      duration = iff(duration > time(2), time(2), duration);
-    case 2 % A time sampled from a uniform distribution
-      duration = time(1) + (time(2) - time(1))*rand;
-    case 1 % A fixed time
-      duration = time(1);
-    otherwise % Pick on of the values
-      duration = randsample(time, 1);
-  end
-end
 end

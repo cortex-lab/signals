@@ -15,6 +15,11 @@ classdef rnd_test < matlab.unittest.TestCase
   methods (TestClassSetup)
     
     function ClassSetup(testCase)
+      % Check whether dependencies are installed
+      required = 'Statistics and Machine Learning Toolbox';
+      A = ver;
+      assert(ismember(required, {A.Name}), '%s not installed', required)
+      
       % Set default seed for reproducibility
       orig = rng;
       testCase.addTeardown(@rng, orig)

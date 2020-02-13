@@ -200,9 +200,9 @@ classdef choiceWorldExpPanel < eui.SignalsExpPanel
               
               p = obj.Parameters.Struct;
               respWin = Inf; if respWin>1000; respWin = 1000; end
-              % Due to the order of the updates, we look for the gain of
-              % the previous trial.
-              gain = getOr(obj.Block.trial(end-1), 'wheelGain', p.normalGain);
+              % Look for the last trial's gain, or use the default
+              gain = [obj.Block.trial.wheelGain];
+              gain = iff(isempty(gain), p.normalGain, @() gain(end));
               th = p.responseDisplacement/gain;
               startPos = obj.InputSensorPos(find(obj.InputSensorPosTime<ioTime,1,'last'));
               if isempty(startPos); startPos = obj.InputSensorPos(obj.InputSensorPosCount); end % for first trial

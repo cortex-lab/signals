@@ -16,6 +16,8 @@ function choiceWorld(t, events, p, visStim, inputs, outputs, audio)
 % The reward volume changes by 0.1ul down to a minimum of 1.5ul provided
 % that the previous session had over 200 trials.  There is no cue interactive
 % delay.
+%
+% Note: This requires the Statistics And Machine Learning Toolbox
 
 %% Fixed parameters
 contrastSet = p.contrastSet.at(events.expStart);
@@ -59,7 +61,7 @@ wheelGain = iff(enoughTrials, normalGain, gain);
 % condition can be chosen in a performance-dependent manner)
 
 % Resetting pre-stim quiescent period
-prestimQuiescentPeriod = at(p.prestimQuiescentTime.map(@(A)rnd.exp(A(3),1,A(1:2))), events.newTrial); 
+prestimQuiescentPeriod = at(p.prestimQuiescentTime.map(@(A)rnd.sample), events.newTrial); 
 preStimQuiescence = sig.quiescenceWatch(prestimQuiescentPeriod, t, wheel, quiescThreshold); 
 % Stimulus onset
 stimOn = at(true, preStimQuiescence); % FIXME test whether at is needed here
