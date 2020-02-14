@@ -10,8 +10,8 @@ classdef Signal < handle
   %   Example: 
   %     create a Signals network and three origin signals
   %     net = sig.Net;
-  %     os1 = net.origin('input 1'); 
-  %     os2 = net.origin('input 2'); 
+  %     os1 = net.origin('input 1');
+  %     os2 = net.origin('input 2');
   %     os3 = net.origin('input 3');
   %
   % See also SIG.NODE.SIGNAL, SIG.NET
@@ -27,22 +27,21 @@ classdef Signal < handle
   %% Abstract methods
   methods (Abstract)
     
-    % 'th = s1.onValue(f)' returns a TidyHandle 'th' which executes a
-    % callback function 'f' whenever 's1' takes a value.
+    % 'h = s.onValue(f)' returns a TidyHandle listener for invoking the
+    % callback function 'f' with the value of 's'.  To remove a listener,
+    % clear the object returned by onValue.
     %
     % Example:
-    %   dispValLong = os1.onValue(@(x)... 
-    %     fprintf('The value of this signal is %d\n',x));
-    %   os1.post(5);
+    %   h = s.onValue(@(v) fprintf('Updated to %d\n', v));
 
     h = onValue(this, fun)
     
-    % 'th = output(s)' returns a TidyHandle listener which displays the
+    % 'h = output(s)' returns a TidyHandle listener which displays the
     % output of signal 's' whenever it takes a value (equivalent to 
-    % 'th = s.onValue(@disp)').
+    % 'h = s.onValue(@disp)').
     % 
     % Example:
-    %   dispValShort = s.output;
+    %   h = s.output;
     %   s.post('hello world'); % 'hello world' will be displayed
     %
     % See also SIG.SIGNAL.ONVALUE
@@ -106,19 +105,12 @@ classdef Signal < handle
     
     p = to(a, b)
     
-    % 'ds = s1.setTrigger(s2)' returns a dependent signal 'ds' which can
-    % only ever take a value of 1. 'ds' initially updates to 1 when 's2' is
-    % set to a truthy value, given that 's1' has a truthy value.
-    % Additional updates of 'ds' take place whenever 's2' is set to a
-    % truthy value, given that 's1' has been "reset" to a truthy value.
+    % 'tr = arm.setTrigger(release)' returns a dependent signal that is true
+    % only when `release` evaluates true after `arm`.
     %
     % Example:
-    %   ds5 = os1.setTrigger(os2);
-    %   ds5Out = output(ds5);
-    %   os2.post(1); % nothing will be displayed
-    %   os1.post(1); os2.post(2); % '1' will be displayed
-    %   os2.post(3); % nothing will be displayed (value of 'ds13' remains 1)
-    %   os1.post(2); os2.post(4); % '1' will be displayed
+    %   % Threshold may be reached only once every interactive phase:
+    %   threshold = interactiveOn.setTrigger(displacement >= targetAzimuth);
     
     tr = setTrigger(arm, release)
     
@@ -582,6 +574,22 @@ classdef Signal < handle
         b = map(a, @rot90, 'rot90(%s)');
       else
         b = map2(a, k, @rot90, 'rot90(%s) %s times');
+      end
+    end
+    
+    function b = any(a, dim)
+      if nargin < 2
+        b = map(a, @any, 'any(%s)');
+      else
+        b = map2(a, dim, @any, 'any(%s) over dim %s');
+      end
+    end
+    
+    function b = all(a, dim)
+      if nargin < 2
+        b = map(a, @all, 'all(%s)');
+      else
+        b = map2(a, dim, @all, 'all(%s) over dim %s');
       end
     end
     

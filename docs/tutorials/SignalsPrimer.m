@@ -1058,6 +1058,20 @@ s = merge(a, b, c).at(map([a b c], true)); % map(true) for if a, b, c = 0
 % section on scan above for more info.
 s = a.scan(f, [], 'pars', b, c); % b and c values used in f when a updates
 
+
+%% FAQ
+%%% I'm seeing '-1 is not a valid network id' in the command prompt
+% Currently there is a limit of 10 networks at any one time.  If you see
+% this you most likely have more than 10 in your workspace.  Run clear all
+% and then re-run your code.
+%
+%%% Is there a way to create a variable number of visual stimuli?
+% Not precisely.  You can not copy visual stimulus objects in Signals, and
+% all stimulus objects must be loaded within the experiment definition,
+% before your parameter signals are set.  The best option is to create a
+% large number of stimulus objects with a for loop, then set the `show`
+% properties to true for however many you want to use.
+
 %% Etc.
 % Author: Miles Wells
 %

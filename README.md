@@ -1,6 +1,6 @@
 # *signals*
-![Custom badge](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fgladius.serveo.net%2Fcoverage%2Fsignals%2Fmaster)
-![Custom badge](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fgladius.serveo.net%2Fstatus%2Fsignals%2Fmaster)
+![Custom badge](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fsilent-zebra-36.tunnel.datahub.at%2Fcoverage%2Fsignals%2Fmaster)
+![Custom badge](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fsilent-zebra-36.tunnel.datahub.at%2Fstatus%2Fsignals%2Fmaster)
 
 Wouldn't it be nice if you could describe the presentation of stimuli in your experiment with simple, concise code? i.e.
 

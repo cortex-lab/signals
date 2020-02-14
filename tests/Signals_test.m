@@ -9,6 +9,7 @@ classdef Signals_test < matlab.unittest.TestCase
   methods (TestClassSetup)
     function createNetwork(testCase)
       testCase.net = sig.Net;
+      testCase.addTeardown(@delete, testCase.net)
     end
   end
   
@@ -44,7 +45,7 @@ classdef Signals_test < matlab.unittest.TestCase
       testCase.verifyMatches(b.Name, '\w+\.map\([\d|\.]*\)', 'Unexpected Name')
       
       % Test transfer function directly
-      % No new changes in network; 
+      % No new changes in network;
       args = {testCase.net.Id, a.Node.Id, [], @identity};
       [~, valset] = sig.transfer.map(args{:});
       testCase.verifyTrue(~valset, 'Expected ''valset'' to be false')
@@ -70,7 +71,7 @@ classdef Signals_test < matlab.unittest.TestCase
     function testMapn(testCase)
       % Tests for mapn method
       [a, b] = deal(testCase.A, testCase.B);
-            
+      
       % Test mapping multiple input signals to multiple output signals
       [X, Y] = a.mapn(b, @meshgrid);
       
@@ -98,7 +99,7 @@ classdef Signals_test < matlab.unittest.TestCase
       testCase.verifyMatches(Y.Name, '.*[2]', 'Unexpected Name')
       
       % Test transfer function directly
-      % No new changes in network; 
+      % No new changes in network;
       args = {testCase.net.Id, [a.Node.Id, b.Node.Id], [], {@meshgrid, 1}};
       [~, valset] = sig.transfer.mapn(args{:});
       testCase.verifyTrue(~valset, 'Expected ''valset'' to be false')
@@ -137,7 +138,7 @@ classdef Signals_test < matlab.unittest.TestCase
       testCase.verifyMatches(sz_m.Name, expected, 'Unexpected Name')
       testCase.verifyMatches(sz_n.Name, expected, 'Unexpected Name')
       
-     % 2 input, 1 output
+      % 2 input, 1 output
       [sz] = size(a, 2);
       a.post(1:n)
       testCase.verifyEqual(sz.Node.CurrValue, n, ...
@@ -293,7 +294,7 @@ classdef Signals_test < matlab.unittest.TestCase
     end
     
     function test_flipud(testCase)
-      % Test for the fliplr method
+      % Test for the flipud method
       a = testCase.A;
       b = flipud(a); % our method to test
       x = magic(6); % values to test
@@ -305,7 +306,7 @@ classdef Signals_test < matlab.unittest.TestCase
     end
     
     function test_rot90(testCase)
-      % Test for the fliplr method
+      % Test for the rot90 method
       a = testCase.A;
       b = rot90(a); % our method to test
       x = magic(6); % values to test
@@ -318,6 +319,38 @@ classdef Signals_test < matlab.unittest.TestCase
       b = rot90(a,4);
       a.post(x)
       testCase.verifyEqual(b.Node.CurrValue, x)
+    end
+    
+    function test_any(testCase)
+      % Test for the any method
+      a = testCase.A;
+      b = any(a); % our method to test
+      x = eye(6); % values to test
+      e = any(x); % expected output
+      
+      testCase.verifyMatches(b.Name, 'any\(\w+\)', 'Unexpected Name')
+      a.post(x)
+      testCase.verifyEqual(b.Node.CurrValue, e)
+      % test second input
+      b = any(a,'all');
+      a.post(x)
+      testCase.verifyTrue(b.Node.CurrValue)
+    end
+    
+    function test_all(testCase)
+      % Test for the all method
+      a = testCase.A;
+      b = all(a); % our method to test
+      x = eye(6); % values to test
+      e = all(x); % expected output
+      
+      testCase.verifyMatches(b.Name, 'all\(\w+\)', 'Unexpected Name')
+      a.post(x)
+      testCase.verifyEqual(b.Node.CurrValue, e)
+      % test second input
+      b = all(a,'all');
+      a.post(x)
+      testCase.verifyFalse(b.Node.CurrValue)
     end
     
     function test_floor(testCase)
@@ -401,6 +434,58 @@ classdef Signals_test < matlab.unittest.TestCase
       testCase.verifyTrue(isequal(affectedIdxs, changed, [a.Node.Id;s.Node.Id]), ...
         'Unexpected network behaviour upon posting value to signal a')
       testCase.verifyTrue(isequal(v, a.Node.CurrValue, s.Node.CurrValue), ...
+        'Unexpected values of signals a and s')
+      
+      % Post a non-truthy value to b
+      affectedIdxs = submit(testCase.net, b.Node.Id, false);
+      changed = applyNodes(testCase.net, affectedIdxs);
+      % Check only b's node affected
+      testCase.verifyTrue(isequal(affectedIdxs, changed, b.Node.Id), ...
+        'Unexpected nodes affected when predicate signal false')
+      
+      % Post a value to signal a
+      v = rand;
+      affectedIdxs = submit(testCase.net, a.Node.Id, v);
+      changed = applyNodes(testCase.net, affectedIdxs);
+      % Check only a's node affected
+      testCase.verifyTrue(isequal(affectedIdxs, changed, a.Node.Id), ...
+        'Unexpected network behaviour upon posting value to signal a')
+      testCase.verifyTrue(v == a.Node.CurrValue && s.Node.CurrValue ~= v, ...
+        'Unexpected values of signals a and s')
+    end
+    
+    function test_at(testCase)
+      % Test for the at method
+      [a, b] = deal(testCase.A, testCase.B);
+      s = a.at(b);
+      testCase.verifyMatches(s.Name, '\w.at(\w+\)', 'Unexpected Name')
+      
+      % Post a value to signal a
+      v = rand;
+      affectedIdxs = submit(testCase.net, a.Node.Id, v);
+      changed = applyNodes(testCase.net, affectedIdxs);
+      % Check only a changed
+      testCase.verifyTrue(isequal(affectedIdxs, changed, a.Node.Id), ...
+        'Unexpected network behaviour upon posting value to signal a')
+            
+      % Post a truthy value to b
+      affectedIdxs = submit(testCase.net, b.Node.Id, true);
+      changed = applyNodes(testCase.net, affectedIdxs);
+      % Check b and s nodes changed
+      testCase.verifyTrue(isequal(affectedIdxs, changed, [b.Node.Id;s.Node.Id]), ...
+        'Unexpected network behaviour upon posting value to signal b')
+      testCase.verifyTrue(isequal(v, a.Node.CurrValue, s.Node.CurrValue), ...
+        'Unexpected values of signals a and s')
+
+      % Post a value to signal a
+      v = rand;
+      affectedIdxs = submit(testCase.net, a.Node.Id, v);
+      changed = applyNodes(testCase.net, affectedIdxs);
+      % Check only a's node affected: unlike keepwhen, s will not be
+      % updated as b (dispite being true) has not changed since last update
+      testCase.verifyTrue(isequal(affectedIdxs, changed, a.Node.Id), ...
+        'Unexpected network behaviour upon posting value to signal a')
+      testCase.verifyTrue(v == a.Node.CurrValue && s.Node.CurrValue ~= v, ...
         'Unexpected values of signals a and s')
       
       % Post a non-truthy value to b

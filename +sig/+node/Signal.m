@@ -10,8 +10,10 @@ classdef Signal < sig.Signal & handle
     Node
   end
   
-  properties %(SetAccess = private, Transient)
+  properties (SetAccess = private, Transient)
+    % Map of callback functions to execute when value updates
     OnValueCallbacks
+    % Unique key of next callback in OnValueCallbacks map
     NextCallbackId = 0
     Listeners
   end
@@ -20,6 +22,14 @@ classdef Signal < sig.Signal & handle
     function this = Signal(node)
       this.Node = node;
       this.OnValueCallbacks = containers.Map('KeyType', 'int32', 'ValueType', 'any');
+      % Debugging registry
+      if node.Net.Debug
+        stack = dbstack('-completenames');
+        % TODO Need more robust way of searching stack
+        defIdx = find(strcmp({stack.name},'fileFunction/call')) - 1;
+        ln = iff(isempty(defIdx), 0, @() stack(defIdx).line);
+        node.Net.NodeLine(node.Id) = ln;
+      end
     end
     
     function v = get.Name(this)
@@ -35,10 +45,7 @@ classdef Signal < sig.Signal & handle
       s = sig.node.SubscriptableSignal(node);
       node.FormatSpec = this.Node.FormatSpec;
       node.DisplayInputs = this.Node.DisplayInputs;
-    end
-    
-    function y = end(this, k, n)
-      y = expr.End(k, n);
+      if node.Net.Debug; node.Net.NodeName(node.Id) = this.Name; end
     end
     
     function s = at(what, when)
@@ -48,6 +55,7 @@ classdef Signal < sig.Signal & handle
     function s = then(when, what)
       s = applyTransferFun(what, when, 'sig.transfer.at', [], '%s.then(%s)');
       s.Node.DisplayInputs = fliplr(s.Node.DisplayInputs);
+      if s.Node.Net.Debug; s.Node.Net.NodeName(s.Node.Id) = s.Name; end
     end
     
     function f = keepWhen(what, when)
@@ -60,6 +68,9 @@ classdef Signal < sig.Signal & handle
         m = this.map(true).then(f);
         m.Node.DisplayInputs = this.Node;
         m.Node.FormatSpec = formatSpec;
+        % Add string name if in debug mode
+        net = this.Node.Net;
+        if net.Debug; net.NodeName(m.Node.Id) = m.Name; end
         return
       elseif ~isa(f, 'function_handle')
         f = fun.always(f); % always map to a value
@@ -117,6 +128,7 @@ classdef Signal < sig.Signal & handle
       node = sig.node.Node(inps, 'sig.transfer.scan', funcs);
       node.FormatSpec = formatSpec;
       sc = sig.node.ScanningSignal(node);
+      if node.Net.Debug; node.Net.NodeName(node.Id) = sc.Name; end
       % initialise value of derived signal using seed
       if isa(seed, 'sig.node.Signal') % if seed is a signal, use its current value, if any
         if seed.Node.CurrValueSet
@@ -150,6 +162,8 @@ classdef Signal < sig.Signal & handle
       c.Node.DisplayInputs = valuePredNodes(:);
       c.Node.FormatSpec = [...
         'cond( ' strJoin(repmat({'%s if %s'}, nc, 1), ' ; ') ' )'];
+      net = c.Node.Net;
+      if net.Debug; net.NodeName(c.Node.Id) = c.Name; end
     end
     
     function s = selectFrom(this, varargin)
@@ -169,6 +183,8 @@ classdef Signal < sig.Signal & handle
       % @todo implement as a transfer function
       b = scan(this, sig.scan.buffering(nSamples), []);
       b.Node.FormatSpec = sprintf('%%s.bufferUpTo(%i)', nSamples);
+      net = b.Node.Net;
+      if net.Debug; net.NodeName(b.Node.Id) = b.Name; end
     end
     
     function b = buffer(this, nSamples)
@@ -177,6 +193,8 @@ classdef Signal < sig.Signal & handle
       b = buffupto.keepWhen(nelem == nSamples);
       b.Node.DisplayInputs = this.Node;
       b.Node.FormatSpec = sprintf('%%s.buffer(%i)', nSamples);
+      net = b.Node.Net;
+      if net.Debug; net.NodeName(b.Node.Id) = b.Name; end
     end
     
 %     function b = bufferUpTo(this, nSamples)
@@ -215,10 +233,6 @@ classdef Signal < sig.Signal & handle
     function p = to(a, b)
       p = applyTransferFun(a, b, 'sig.transfer.latch', [], '%s.to(%s)');
       p.Node.CurrValue = false;
-
-%       p = skipRepeats(merge(map(a, @logical), ~b));
-%       p.Node.DisplayInputs = [a.Node b.Node];
-%       p.Node.FormatSpec = '%s.to(%s)';
     end
     
     function tr = setTrigger(set, release)
@@ -226,6 +240,8 @@ classdef Signal < sig.Signal & handle
       tr = at(true, ~armed); % samples true each time armed goes to false
       tr.Node.FormatSpec = '%s.setTrigger(%s)';
       tr.Node.DisplayInputs = [set.Node release.Node];
+      net = tr.Node.Net;
+      if net.Debug; net.NodeName(tr.Node.Id) = tr.Name; end
     end
     
     function nr = skipRepeats(this)
@@ -236,12 +252,16 @@ classdef Signal < sig.Signal & handle
       b = buffer(this, n + 1);
       l = b.map(@(v)v(1), sprintf('%%s.lag(%i)', n));
       l.Node.DisplayInputs = this.Node;
+      net = b.Node.Net;
+      if net.Debug; net.NodeName(l.Node.Id) = l.Name; end
     end
     
     function d = delta(this)
       d = map(buffer(this, 2), @diff);
       d.Node.DisplayInputs = this.Node;
       d.Node.FormatSpec = [char(916) '%s']; % char(916) is the delta character
+      net = d.Node.Net;
+      if net.Debug; net.NodeName(d.Node.Id) = d.Name; end
     end
     
     function d = delay(this, period)
@@ -254,11 +274,16 @@ classdef Signal < sig.Signal & handle
       d = sig.node.OriginSignal(sig.node.Node(this.Node.Net));
       d.Node.FormatSpec = '%s.delay(%s)';
       d.Node.DisplayInputs = scheduler.Node.DisplayInputs;
+      % Store name while debugging
+      net = d.Node.Net;
+      if net.Debug; net.NodeName(d.Node.Id) = d.Name; end
+
       delayedpost = scheduler.onValue(fun.partial(@delayedPost, d));
       
       % For complicated reasons, making a further identity signal from d to
       % hold the listener handle helps ensure it can be garbage collected:
       %   The handle can't be held by an object it holds a reference to
+      % TODO Try storing the handle in Signal Listeners prop, not Node's
       d = identity(d);
       d.Node.Listeners = [d.Node.Listeners delayedpost];
     end
@@ -273,10 +298,10 @@ classdef Signal < sig.Signal & handle
     function fs = flatten(this)
       % Flattens a nested signal down to its value.
       % 
-      % Returns a signal `fs` whose value is a flattened version of 
-      % `this`'s value: if `this` is a signal whose value is another 
-      % signal, `s`, `fs` will take the value that `s` holds, rather than 
-      % taking the value of `s` itself.
+      % Returns a signal whose value is a flattened version of this
+      % signal's value: If the current value is itself a signal (as is the
+      % case with subscriptable signals), the value it holds will be
+      % returned, rather than a Signal object itself.
       
       state = StructRef;
       state.unappliedInputChanges = false;
@@ -302,47 +327,7 @@ classdef Signal < sig.Signal & handle
 
     end
     
-    function tr = applyTransferFun(varargin)
-      % New signal derived by applying a transfer function to input node(s)
-      % 
-      % This function creates a node from the nodes of input values (these 
-      % input values can be signals or non-signals), then creates a new 
-      % signal from the new node.
-      %
-      % Transfer functions work at a lower level than transformations like 
-      % `map` or `mapn`, instead operating directly with the underlying 
-      % input nodes and output node, potentially using both their current 
-      % *and* new values.
-      %
-      % [tr] = s1.applyTransferFun([s2], ..., funName, funArg, formatSpec)
-      % 
-      % Inputs:
-      %   `s2`: an input value/signal (there can be multiple as separate 
-      %   args)
-      %   `funName`: a string of the name of the transfer function to be 
-      %   applied 
-      %   `funArg`: an optional function handle which can be applied by the
-      %   transfer function
-      %   `formatSpec`: an optional string which is used to format the name 
-      %   of the output signal
-      %
-      % Outputs: `tr`: output signal
-      %
-      % Examples: 
-      %   tr = s1.applyTransferFun(s2, 'mapn', @plus)
-      %   tr = s1.applyTransferFun(s2, 5, 'mapn', @plus, '%s.mapn(%s, %s)')
-      %
-      % *Note: The transfer function will be passed `funArg`, if existing,
-      % at each invocation.
-            
-      [inpVals{1:nargin-3}, funName, funArg, formatSpec] = varargin{:}; % destructure input args
-      inpNodes = sig.node.from(inpVals); % get/create nodes from/for input vals
-      node = sig.node.Node(inpNodes, funName, funArg); % create node for output signal
-      node.FormatSpec = formatSpec;
-      tr = sig.node.Signal(node); % build new signal from new node
-      
-    end
-    
+
     function l = log(this, clockFun)
       % Creates signals that logs the values and timestamps of input signal
       %
@@ -361,6 +346,9 @@ classdef Signal < sig.Signal & handle
       node.FormatSpec = '%s.log()';
       l = sig.node.Signal(node);
       l.Node.CurrValue = struct('time', {}, 'value', {});
+      % Store name for debugging
+      net = node.Net;
+      if net.Debug; net.NodeName(node.Id) = l.Name; end
     end
     
     function h = onValue(this, fun)
@@ -382,6 +370,12 @@ classdef Signal < sig.Signal & handle
     end
     
     function h = output(this)
+      % OUTPUT Display current value each update
+      %   Prints the value of this Signal to the command window each time
+      %   it updates.  Returns a listener handle which when cleared removes
+      %   this callback.
+      %
+      % See also onValue
       h = onValue(this, @disp);
     end
     
@@ -431,10 +425,24 @@ classdef Signal < sig.Signal & handle
     end
     
     function h = into(from, to)
+      % INTO Update `to` when `from` updates
+      %   Posts value of this signal into an origin signal each time this
+      %   updates.  Returns a listener handle which when cleared removes
+      %   this callback.
+      %
+      % See also onValue
+      assert(isa(to, 'sig.node.OriginSignal'), ...
+        'signals:Signal:into:incorrectTarget', ...
+        'Target signal must be origin signal')
       h = onValue(from, @(v)post(to, v));
     end
 
     function valueChanged(this, newValue)
+      % VALUECHANGED Trigger callbacks with new value
+      %   Called by mexnet when node value updated.  Calls each function in
+      %   OnValueCallbacks list with newValue.
+      %
+      % See also onValue, SetNodeEventTarget
       callbacks = this.OnValueCallbacks.values();
       n = numel(callbacks);
       for ii = 1:n
@@ -476,7 +484,7 @@ classdef Signal < sig.Signal & handle
       % event signal is derived by monitoring the 'armed' field of state
       % for new false values (i.e. when the armed trigger is released).
       qevt = state.armed.skipRepeats().not().then(true);
-      
+      %TODO Set nice format spec here?
       % helper functions
       
       function state = initState(dur)
@@ -514,6 +522,53 @@ classdef Signal < sig.Signal & handle
   end
   
   methods (Access = protected)
+    function tr = applyTransferFun(varargin)
+      % New signal derived by applying a transfer function to input node(s)
+      % 
+      % This function creates a node from the nodes of input values (these 
+      % input values can be signals or non-signals), then creates a new 
+      % signal from the new node.
+      %
+      % Transfer functions work at a lower level than transformations like 
+      % `map` or `mapn`, instead operating directly with the underlying 
+      % input nodes and output node, potentially using both their current 
+      % *and* new values.
+      %
+      % [tr] = s1.applyTransferFun([s2], ..., funName, funArg, formatSpec)
+      % 
+      % Inputs:
+      %   `s2`: an input value/signal (there can be multiple as separate 
+      %   args)
+      %   `funName`: a string of the name of the transfer function to be 
+      %   applied 
+      %   `funArg`: an optional function handle which can be applied by the
+      %   transfer function
+      %   `formatSpec`: an optional string which is used to format the name 
+      %   of the output signal
+      %
+      % Outputs: `tr`: output signal
+      %
+      % Examples: 
+      %   tr = s1.applyTransferFun(s2, 'mapn', @plus)
+      %   tr = s1.applyTransferFun(s2, 5, 'mapn', @plus, '%s.mapn(%s, %s)')
+      %
+      % *Note: The transfer function will be passed `funArg`, if existing,
+      % at each invocation.
+            
+      [inpVals{1:nargin-3}, funName, funArg, formatSpec] = varargin{:}; % destructure input args
+      inpNodes = sig.node.from(inpVals); % get/create nodes from/for input vals
+      node = sig.node.Node(inpNodes, funName, funArg); % create node for output signal
+      node.FormatSpec = formatSpec;
+      tr = sig.node.Signal(node); % build new signal from new node
+      net = node.Net;
+      if net.Debug; net.NodeName(tr.Node.Id) = tr.Name; end
+    end
+  end
+  
+  methods (Static)
+    function y = end(k, n)
+      y = expr.End(k, n);
+    end
   end
 end
 

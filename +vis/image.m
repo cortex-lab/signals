@@ -87,10 +87,10 @@ if nargin > 1
     name = sprintf('%s',filename); 
     [elem.sourceImage, ~, srcAlpha] = imread(sourceImage);
     if ~isempty(srcAlpha); elem.alpha = srcAlpha; end
-  elseif isobject(sourceImage) % Assume Signal
+  elseif isa(sourceImage, 'sig.Signal') && ~isa(sourceImage, 'sig.VoidSignal')
     name = sourceImage.Name;
     elem.sourceImage = sourceImage;
-  else
+  else % Otherwise it must be an image
     elem.sourceImage = sourceImage;
   end
 end
@@ -115,7 +115,7 @@ elem.Name = name;
     
     if isobject(newelem.sourceImage)
       % FIXME Make vis.rgba a Signal method or define new image subclass? 
-      imgLayer.textureId = ['~',name];
+      imgLayer.textureId = ['~' name];
       imgLayer.rgba = map(newelem.sourceImage, @(img)vis.rgba(img,1));
       imgLayer.rgbaSize = map(newelem.sourceImage,...
         @(img)[size(img,2), size(img,1)]);

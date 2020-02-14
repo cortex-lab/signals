@@ -19,7 +19,7 @@ tmr = timer('ExecutionMode', 'fixedSpacing', 'Period', 5e-3,...
 
 vbox = uix.VBox('Parent', parent);
 
-[vc, vcc] = vis.component(vbox.UIContainer); %error with jave and new openGL
+[vc, vcc] = vis.component(vbox.UIContainer); %error with java: no JOGL
 vc.clearColour([0.5 0.5 0.5 1]);
 
 btnbox = uix.HBox('Parent', vbox);

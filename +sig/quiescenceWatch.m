@@ -1,6 +1,5 @@
 function qevt = quiescenceWatch(newPeriod, t, x, threshold)
-%sig.quiescenceWatch Trigger when a signal doesn't change for some period
-%
+%SIG.QUIESCENCEWATCH Trigger when a signal doesn't change for some period
 %   qevt = sig.quiescenceWatch(newPeriod, t, x, [threshold]) returns a
 %   signal that once activated, triggers when 'x' does not change more than
 %   some threshold after a specified period. The trigger watch is activated

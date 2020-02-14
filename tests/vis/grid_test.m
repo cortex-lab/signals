@@ -3,6 +3,7 @@
 % preconditions:
 net = sig.Net;
 t = net.origin('t');
+mess = onCleanup(@() delete(net)); % Delete network
 
 % Make sure:
 % a) the grid gets defined correctly

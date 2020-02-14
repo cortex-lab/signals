@@ -27,7 +27,7 @@ glUniform1i(model.texIdx, 0);
 lastTexId = [];
 for li = 1:numel(layers)
   layer = layers(li);
-  if isempty(layer.show) || ~layer.show
+  if any(cellfun('isempty', struct2cell(layer))) || ~layer.show
     continue
   end
   switch layer.blending

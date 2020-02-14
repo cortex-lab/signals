@@ -1,5 +1,5 @@
 function axh = timeplot(varargin)
-%SIG.TIMEPLOT Plots input Signals against time
+%SIG.TIMEPLOT Plots values of Signals against time
 % Creates a subplot for each Signal input and plots the values of that
 % Signal as they update.  If a StructRef or Registry is provided, each
 % field is plotted separately.  The Name field or field name is used to
@@ -44,14 +44,15 @@ function axh = timeplot(varargin)
 [present, value, idx] = namedArg(varargin, 'parent');
 if present
   figh = value;
+  clf(figh); % Clear the figure
   varargin(idx:idx+1) = []; % Remove from var list
 else % If no handle provided, create new figure
   figh = figure('Name', 'LivePlot', 'NumberTitle', 'off', 'Color', 'w');
+  % set figure position to be lower right-hand corner
+  g = groot;
+  scrnSz = g.ScreenSize(3:4);
+  figh.Position = [scrnSz(1)-550, 50, 500, 700];
 end
-% set figure position to be lower right-hand corner
-g = groot;
-scrnSz = g.ScreenSize(3:4);
-figh.Position = [scrnSz(1)-550, 50, 500, 700];
 % Find 'mode' named value
 [present, value, idx] = namedArg(varargin, 'mode');
 if present
@@ -68,8 +69,6 @@ if present
 else % Default time window is 5 seconds
   tWin = 5;
 end
-% Clear the figure
-clf(figh);
 
 % Initialize cell array to store all signals and their names
 signals = cell(length(varargin),1);
@@ -189,6 +188,9 @@ set(figh, 'DeleteFcn', @(~,~)delete(listeners));
         'HorizontalAlignment', 'center',...
         'VerticalAlignment', 'bottom', ...
         'Interpreter', 'none');
+    elseif isempty(value.x)
+      % Replace with NaN so we can plot it
+      value.x = nan;
     end
     % If there is no previous value, just use the current value
     if isempty(lastval{idx})

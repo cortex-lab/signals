@@ -1,6 +1,12 @@
 % preconditions
 net = sig.Net;
 t = net.origin('testNode');
+mess = onCleanup(@() delete(net)); % Delete network
+%FIXME Starting 2019a, imdemos no longer exists
+% @body imdemos.mat is used by the signal image_test.  This is either no longer
+% present in 2019a, or requires the image processing toolbox.  A different
+% set of images from C:\Program Files\MATLAB\R2019a\toolbox\matlab\demos
+% should be used instead.
 testImages = load('imdemos.mat');
 
 %% Test 1: Rescale MATLAB double array

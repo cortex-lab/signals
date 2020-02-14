@@ -1,6 +1,16 @@
 classdef Registry < StructRef
-  %SIG.REGISTRY Summary of this class goes here
-  %   Detailed explanation goes here
+  %SIG.REGISTRY Log values of Signals assigned to this
+  %   Signals added to the Registry object via subassign have their values
+  %   stored and timestamped using the provided clock function.  
+  %
+  %   Example:
+  %     clock = hw.ptb.Clock;
+  %     registry = sig.Registry(@clock.now)
+  %     registry.A = s1;
+  %     registry.B = s2;
+  %     S = registry.logs()
+  %
+  % See also AUDSTREAM.REGISTRY, STRUCTREF
   
   properties
     EntryLogs

@@ -1,6 +1,20 @@
 classdef Net < handle
-  %sig.Net A network that can contain sig.node.Node's.
-  %   A network that contains and manages sig.node.Node's.
+  %sig.Net A network for managing Signals nodes.
+  %   A network that contains and manages Signals nodes.  A new Signals
+  %   network is created in mexnet upon instantiation and new nodes may be
+  %   added to the network via methods such as `origin`,
+  %   `subscriptableOrigin` and `rootNode`.
+  %
+  %   Example:
+  %     net = sig.Net;
+  %     input = net.origin('input signal');
+  %     output = input ^ 2;
+  
+  properties
+    % Debug mode.  When true the names and function line numbers are
+    % recorded when new nodes are added to the network.
+    Debug matlab.lang.OnOffSwitchState = 'off'
+  end
   
   properties (Transient)
     % A structure holding node ids, the values they should take and the
@@ -10,10 +24,20 @@ classdef Net < handle
   end
   
   properties (SetAccess = private, Transient)
-    Id
+    % The unique network identifier.
+    Id double
+    % The names of the network's nodes mapped to their ids; for debugging
+    % purposes.
+    NodeName
+    % A map of function line numbers where each node was defined; for
+    % debugging purposes.
+    NodeLine
   end
   
   events
+    % Triggered when the object is being deleted. NB: The underlying mexnet
+    % may be deleted without a call to this.  @TODO: Use superclass event
+    % instead?
     Deleting
   end
   
@@ -24,6 +48,8 @@ classdef Net < handle
       end
       this.Id = createNetwork(size);
       this.Schedule = struct('nodeid', {}, 'value', {}, 'when', {});
+      this.NodeLine = containers.Map('KeyType', 'int32', 'ValueType', 'int32');
+      this.NodeName = containers.Map('KeyType', 'int32', 'ValueType', 'char');
     end
     
     function runSchedule(this)
@@ -52,9 +78,9 @@ classdef Net < handle
         this.Schedule(dueIdx) = [];
         % work through them
         for ti = 1:numel(dueTasks)
-          dt = GetSecs - dueTasks(ti).when;
+          % dt = GetSecs - dueTasks(ti).when;
           affectedIdxs = submit(this.Id, dueTasks(ti).nodeid, dueTasks(ti).value);
-          changed = applyNodes(this.Id, affectedIdxs);
+          applyNodes(this.Id, affectedIdxs);
         end
       end
     end

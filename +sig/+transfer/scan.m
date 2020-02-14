@@ -37,9 +37,20 @@ for ii = 1:nElemInps
     % Canonical line: call scan function with current accumulator value (ie
     % current node value) and the new input value. New output is revised
     % accumulator value
-    f = funcs{ii};
-    val = f(val, itemwv, pars{:});
-    valset = true;
+    try
+      f = funcs{ii};
+      val = f(val, itemwv, pars{:});
+      valset = true;
+    catch ex
+      msg = sprintf(['Error in Net %i mapping Nodes [%s] to %i:\n'...
+        'function call ''%s'' with inputs (%s) produced an error:\n %s'],...
+        net, num2str(input), node, func2str(f), ...
+        strjoin(mapToCell(@(v)toStr(v,1), [{val itemwv}, pars]), ', '), ex.message);
+      sigEx = sig.Exception('transfer:mapn:error', ...
+        msg, net, node, input, [{val itemwv}, pars], f);
+      ex = ex.addCause(sigEx);
+      rethrow(ex)
+    end
   end
 end
 

@@ -12,11 +12,9 @@ classdef Signals_perftest < matlab.perftest.TestCase
 % `A` & `B` properties are treated as "input layer" origin signals from 
 % which all other signals are created.
 %   
-% Example - display the mean measured time for running each test:
+% Example:
 %   results = runperf('Signals_perftest.m');
-%   fullTableResults = vertcat(results.Samples);
-%   meanTimeByTestTable = varfun(@mean, fullTableResults,...
-%     'InputVariables', 'MeasuredTime', 'GroupingVariables', 'Name')
+%   results.sampleSummary();
 %
   
   properties     

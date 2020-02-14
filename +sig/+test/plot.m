@@ -1,15 +1,17 @@
 function axh = plot(varargin)
-%SIG.PLOT Plot two input signals against each other
-%   sig.plot(x, y)
+%SIG.TEST.PLOT Plot values of two signals against each other
+%   SIG.TEST.PLOT([AX, ]X, Y) Plots signal x vs signal y in ax and returns
+%   the plot axes handle.
 %
-%   Inputs: x - Signal to be plotted on the x axis
+%   Inputs: ax (optional) - handle to plot axes
+%           x - Signal to be plotted on the x axis
 %           y - Signal to be plotted on the y axis
 %           Name-Value pairs - optional name-value pairs for the axes
 %
-%   Outputs: axh - Axes handle
+%   Outputs: axh - Axes handle used.  If the first input was an axes
+%                  handle, the same handle is returned
 %
 %   See also SIG.TIMEPLOT
-% TODO Document inline
 % TODO Deal with empty input names
 
 % If the first input argument is a handle, assume an Axes handle was

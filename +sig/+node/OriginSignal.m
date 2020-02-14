@@ -17,7 +17,6 @@ classdef OriginSignal < sig.node.Signal
       % an array containing the network indices of the signals which will
       % be affected as a result of this post
       affectedIdxs = submit(this.Node.NetId, this.Node.Id, v);
-%       changed = applyNodes(this.Node.NetId, affectedIdxs);
       applyNodes(this.Node.NetId, affectedIdxs);
     end
 

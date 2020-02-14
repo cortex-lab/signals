@@ -18,7 +18,7 @@ expected = {...
 actual = cellsprintf(formatSpec, A, B, C, D);
 assert(isequal(actual, expected))
 
-%% Test 1: Tests single inputs
+%% Test 2: Tests single inputs
 % Test that formating consistent with sprintf using signal input
 testArgs = {43.542542, 5, "hi", 4};
 expected = {sprintf(formatSpec, testArgs{:})};

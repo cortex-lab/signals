@@ -1,21 +1,27 @@
 % setNodeEventTarget.m Help file for setNodeEventTarget MEX-file.
 %  setNodeEventTarget.mex64 - Compiled C MEX
 %
-%  Set event target callback(?). 
+%  Call valueChanged method of target each time node value updates. 
 %    
 %  Inputs: 
 %    network id (int)
 %    node id (int)
-%    target (?)
+%    target (sig.Signal)
 %
 %  Outputs:
 %    N/A
 %
 %  The calling syntax is:
-% 		setNodeEventTarget(netID, nodeID, eventTarget)
+%    setNodeEventTarget(netID, nodeID, eventTarget)
 %
 %  Examples:
-%     TODO Add example
+%     % Display value when node updates
+%     signal = origin(sig.Net, 'node');
+%     signal.OnValueCallbacks = {@disp}; % Protected property
+%     setNodeEventTarget(node.Net.Id, node.Id, signal)
+%
+%     % Remove event target callback
+%     setNodeEventTarget(node.Net.Id, node.Id, [])
 %
 %  Errors:
 %     sq:notEnoughArgs - Incorrect number of input arguments

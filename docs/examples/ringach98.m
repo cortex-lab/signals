@@ -18,18 +18,25 @@ sf = 0.2; %spatial frequency, cyc/deg
 winlen = 10; % length of histogram window, frames
 
 %% Figure window
-gr = groot;
-scrnSz = gr.ScreenSize([3,4]);
-figPos = [scrnSz(1)-560, scrnSz(2)-780, 560 700];
-figh = figure('Name', 'Press ctrl on horizontal grating',...
-  'Position', figPos, 'NumberTitle', 'off');
-vbox = uiextras.VBox('Parent', figh);
-[t, setElemsFun] = sig.playgroundPTB([], vbox);
-sigbox = t.Node.Net;
+% Create a figure to plot histogram of responses
+scrnSz = get(groot, 'ScreenSize'); % Get screen resolution
+figPos = [scrnSz(3)-560, scrnSz(4)-780, 560 700]; % Pick a reasonable position
+figh = figure('Name', 'Press ctrl on vertical grating',...
+  'Position', figPos, 'NumberTitle', 'off'); % Create the figure
+
+% Create a container for the play/pause button and axes
+vbox = uix.VBox('Parent', figh);
+% Create a new Psychtoolbox stimulus window and renderer, returns a timing
+% Signal and function to load our visual elements
+[t, setElemsFun] = sig.test.playgroundPTB(vbox);
+sigbox = t.Node.Net; % Handle to the Signals Network object
+
+% Create our axes for the histogram
 axh = axes('Parent', vbox, 'NextPlot', 'replacechildren', 'XTick', oris);
 xlabel(axh, 'Orientation');
 ylabel(axh, 'Time (frames)');
 ylim([0 winlen] + 0.5);
+vbox.Heights = [30 -1]; % 30 px for the button, the rest for the plot
 
 %% Signals stuff
 % Create a signal of WindowKeyPressFcn events from the figure
@@ -46,7 +53,7 @@ currOri = oriIdx.map(@(idx)oris(idx));
 currPhase = phaseIdx.map(@(idx)phases(idx));
 % Create a Gabor with changing orientations and phases
 grating = vis.grating(t, 'sinusoid', 'gaussian');
-grating.show = true;
+grating.show = true; % Make it visible
 grating.orientation = currOri;
 grating.phase = currPhase;
 grating.spatialFreq = sf;

@@ -1,5 +1,5 @@
 classdef VoidSignal < sig.Signal
-  % SIG.VOIDSIGNAL Signal mock class
+  % SIG.VOIDSIGNAL A Singleton class for mocking Signals
   %   A mock Signal class with all methods subclassed so that they return
   %   the same object instance.  This is used as input arguments when
   %   calling Signals definition functions without requiring a network.  If

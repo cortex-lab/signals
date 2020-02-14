@@ -48,9 +48,20 @@ if any(wvset)
   % canonical line: call map function with latest inputs. new output(s) are
   % result from map
   out = cell(1,outnum);
-  [out{:}] = f(inpvals{:});
-  val = out{end};
-  valset = true;
+  try
+    [out{:}] = f(inpvals{:});
+    val = out{end};
+    valset = true;
+  catch ex
+    msg = sprintf(['Error in Net %i mapping Nodes [%s] to %i:\n'...
+      'function call ''%s'' with inputs (%s) produced an error:\n %s'],...
+      net, num2str(inputs), node, func2str(f), ...
+      strjoin(mapToCell(@(v)toStr(v,1),inpvals), ', '), ex.message);
+    sigEx = sig.Exception('transfer:mapn:error', ...
+      msg, net, node, inputs, inpvals, f);
+    ex = ex.addCause(sigEx);
+    rethrow(ex)
+  end
 else % no inputs have a working value -> no output
   val = [];
   valset = false;

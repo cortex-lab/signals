@@ -16,6 +16,7 @@
 net = sig.Net;
 t = net.origin('t');
 ex = struct('identifier', '', 'message', '');
+mess = onCleanup(@() delete(net)); % Delete network
 
 %% Test 1: no window
 

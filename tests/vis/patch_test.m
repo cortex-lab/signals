@@ -15,6 +15,7 @@
 % preconditions:
 net = sig.Net;
 t = net.origin('t');
+mess = onCleanup(@() delete(net)); % Delete network
 
 %% Test 1: no specified shape
 

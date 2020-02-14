@@ -48,6 +48,28 @@ classdef toStr_test < matlab.unittest.TestCase
       testCase.verifyTrue(ischar(actual) && strcmp(actual, '@(x,y)plus(y,x)'), ...
       'Failed for function handle inputs') 
     end
+    
+    function test_inline(testCase)
+      % Test the inline flag.  Should return 1xN char array for all data
+      % types
+      
+      % Test large row vector
+      vec = 1:10;
+      actual = toStr(vec, 1);
+      testCase.verifyEqual(actual, '1x10 double', ...
+        'Failed for long row vector numeric inputs')
+
+      % Test numeric column vector
+      actual = toStr(vec(1:4)', 1);
+      testCase.verifyEqual(actual, '[1; 2; 3; 4]', ...
+        'Failed for small column vector numeric inputs')
+
+      % Test string column vector
+      actual = toStr(["A "; "KK"; "J"], 1);
+      testCase.verifyEqual(actual, '[A ; KK; J]', ...
+        'Failed for small column vector string inputs')
+
+    end
   end
 end
     
