@@ -1,14 +1,14 @@
 function signalsPong(t, events, p, visStim, inputs, outputs, ~)
 % SIGNALSPONG runs a simple version of the classic game, pong, in Signals
 %   This exp def runs a fairly simple one-player version of pong. The game
-%   pits the experimenter against a CPU player - the first to reach a
-%   target score wins. The target score is 5 by default, but is treated as
-%   a Signals parameter, and so can be adjusted within the GUI from which
-%   this exp def is launched. During gameplay, the ball's velocity is
-%   constant, and the ball's trajectory changes randomly upon contact with
-%   a paddle or the wall.
+%   pits the player against a CPU - the first to reach a target score wins.
+%   The target score is 5 by default, but is treated as a Signals
+%   parameter, and so can be adjusted within the GUI from which this exp
+%   def is launched. During gameplay, the ball's velocity is constant, and
+%   the ball's trajectory changes randomly upon contact with a paddle or
+%   the wall.
 %
-%   This exp def should be run via the ExpTestPanel GUI (exp.ExpTest)
+%   This exp def should be run via the SignalsTest GUI (`eui.SignalsTest`)
 % 
 %   Example: 
 %    eui.SignalsTest('signalsPong');
