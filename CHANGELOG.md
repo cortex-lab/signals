@@ -1,6 +1,10 @@
 # Changelog
 
-## [Latest](https://github.com/cortex-lab/signals/commits/master) [1.1.0]
+## [Latest](https://github.com/cortex-lab/signals/commits/master) [1.2.0]<
+
+- HOTFIX: Bugfix for MATLAB versions <2018b `2b7324c`
+
+## [1.1.0]
 
 - Added documentation for visual stimuli `5bf38cb`
 - Variable output assignment `ddfcfc`
