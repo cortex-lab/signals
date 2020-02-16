@@ -14,4 +14,9 @@ grating.show = evts.newTrial.to(stimOff);
 
 stimuli.grating = grating;
 
+try
+  pars.stimDuration = 5; % seconds
+catch
+end
+
 

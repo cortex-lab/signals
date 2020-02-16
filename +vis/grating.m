@@ -74,9 +74,10 @@ elem.show = false;
 % 'flattenStruct' returns the same texture layer but with all fields
 % containing signals replaced by their current value. The 'layers' field
 % is loaded by VIS.DRAW
+flatten = @(A)A(:);
+isInitialized = @(l)~any(flatten(cellfun('isempty', struct2cell(l))));
 layers = elem.map(@makeLayers).flattenStruct();
-initialized = layers.map(@(l)~any(cellfun('isempty', struct2cell(l)), 'all'));
-elem.layers = layers.keepWhen(initialized);
+elem.layers = layers.keepWhen(layers.map(isInitialized));
 end
 
 function layers = makeLayers(newelem)
