@@ -11,13 +11,15 @@ All files in this folder should not be added directly to MATLAB's path, so we re
 
 Contains files that are useful for learning about and how to use *Signals*:
 
-- `SignalsPrimer.m` - Those new to *Signals* should start here. This script contains information on how *Signals* works, and how to create signals in a *Signals* network using common MATLAB and *Signals* specific methods.
-
-- `SignalsPrimer2.m` - A follow-up to `SignalsPrimer` which contains more advanced information, such as...
+- 'GettingStartedWithSignals': Those new to Signals should start here. This script contains information on how Signals works, and how to create signals in a Signals network using common MATLAB and Signals specific methods.
 
 - `signalsExpDefTutorial.m` - A tutorial for creating a *Signals* experiment definition.  This tutorial walks through setting up and running different versions of a *Signals* Experiment based on the [Burgess Steering Wheel Task](https://www.biorxiv.org/content/biorxiv/early/2017/07/25/051912.full.pdf). To run, call `eui.SignalsTest(@signalsExpDefTutorial)`.
 
+- `SignalsPrimer.m` - An in-depth walkthrough of *Signals*.
+
 - `using_visual_stimuli.m` - A guide for learning how *Signals* interacts with Psychtoolbox and OpenGL to create visual stimuli.
+
+- `using_test_gui.m` - A guide for using Rigbox's `eui.SignalsTest` GUI for running Signals exp defs.
 
 ### `examples/scripts` folder
 
