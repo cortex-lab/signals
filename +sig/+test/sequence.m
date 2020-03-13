@@ -1,13 +1,14 @@
-function s = sequence(seq, interval, delay)
+function s = sequence(varargin)
 % SIG.TEST.SEQUENCE Creates a sequence signal from an array
-%   S = SIG.TEST.SEQUENCE(SEQ, INTERVAL[, DELAY]) Returns a signal named
-%   'sequence' which updates with the values of `seq` at a frequency of
-%   `interval` after a given delay.
+%   S = SIG.TEST.SEQUENCE(SEQ, INTERVAL[, DELAY, NAME]) Returns a signal
+%   named 'sequence' which updates with the values of `seq` at a frequency
+%   of `interval` after a given delay.
 %
 %   Inputs:
 %     seq : An array of values for s to update with.
 %     interval : The time interval between updates in seconds.
 %     delay : The start delay in seconds.  Default: 2.
+%     name : The name of the signal.  Default: 'sequence'.
 %
 %   Output:
 %     s : The signal whose values will be updated.
@@ -23,11 +24,18 @@ function s = sequence(seq, interval, delay)
 
 % Create some variables for storing our network
 persistent net schedule nodes n
-if nargin < 3, delay = 2; end % Default start delay of 2 seconds
 if isempty(net) % If there's not already a network...
   net = sig.Net; % ...create a new one
   net.Debug = 'on'; % Activate debug mode by default 
 end
+
+p = inputParser;
+p.addRequired('seq')
+p.addRequired('interval', @double)
+p.addOptional('delay', 2)
+p.addOptional('name', 'x', @ischar)
+p.parse(varargin{:})
+p = p.Results;
 
 % Keep track of the number of nodes in our network.  When there are no more
 % nodes (i.e. the signals have been cleared from the workspace), we will
@@ -39,11 +47,11 @@ if isempty(nodes) % No nodes
   n = then(nNodes < 1, true);
 end
 update = net.origin('indexer'); % Signal to trigger index changes
-seqSig = net.origin('seq'); seqSig.post(seq); % Signal to hold the sequence
+seqSig = net.origin('seq'); seqSig.post(p.seq); % Signal to hold the sequence
 idx = update.scan(@plus, 0); % Signal to index into our sequence
-idx = idx.keepWhen(idx <= length(seq)); % Stop when we reach the end
+idx = idx.keepWhen(idx <= length(p.seq)); % Stop when we reach the end
 s = seqSig(idx); % Index into our sequence signal
-s.Name = 'sequence'; % Rename
+s.Name = p.name;
 
 % When signal falls out of scope, subtract from total number of nodes
 % addlistener(s, 'ObjectBeingDestroyed', @(~,~)nodes.post(-1));
@@ -52,8 +60,8 @@ s.Node.Listeners = TidyHandle(@() nodes.post(-1));
 % Create a timer for updating the indexer
 tmr = timer('Name', 'Sequence timer', ...
   'ExecutionMode', 'fixedRate', ...
-  'Period', interval, ... % Interval between posts, i.e. the frequency
-  'StartDelay', delay, ... % Delay before first value
+  'Period', p.interval, ... % Interval between posts, i.e. the frequency
+  'StartDelay', p.delay, ... % Delay before first value
   'TimerFcn', @(~,~)update.post(true),...
   'StopFcn', @(~,~)cleanup);
 
@@ -75,7 +83,7 @@ end
 if strcmp(schedule.running, 'off'), start(schedule); end
 
 % Create a signal to stop the sequence timer when the sequence is finished
-terminate = at(-1, idx == length(seq));
+terminate = at(-1, idx == length(p.seq));
 h = terminate.delay(1).onValue(@(~)stop(tmr));
 start(tmr) % Start the sequence timer
 nodes.post(1); % Move index to first position

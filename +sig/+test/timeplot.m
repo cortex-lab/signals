@@ -126,7 +126,8 @@ end
 
 for i = 1:n
   % For each Signal, create a subplot
-  axh(i) = subtightplot(n,1,i,[0.02,0.2],0.05,0.05,'parent',figh);
+%   axh(i) = subtightplot(n,1,i,[0.02,0.2],0.05,0.05,'parent',figh);
+    axh(i) = subtightplot(n,1,i,[0.05,0.2],0.05,0.05,'parent',figh);
   % Derive a new Signal that stores the value and its update time in a
   % struct
   x_t{i} = signals{i}.map(...
