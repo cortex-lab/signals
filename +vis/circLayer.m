@@ -18,9 +18,24 @@ function [layer, img] = circLayer(pos, dims, orientation)
 %
 %  See also VIS.PATCH, VIS.RECTLAYER, VIS.EMPTYLAYER
 
+%% Layer properties
+% Use empty texture layer as template
+layer = vis.emptyLayer();
+% Linear interpolation smooths contour when scaled
+layer.interpolation = 'linear';
+% Set the position and orientation of the texture
+layer.texOffset = pos;
+layer.texAngle = orientation;
+% Scale texture to the desired dimentions
+layer.size = dims;
+% Ensure texture is not repeated across the screen
+layer.isPeriodic = false;
+
 %% Circle
+% Image must not be a Signal so choose a reasonable value for the texture
+if isa(dims, 'sig.Signal'), dims = 500; end
 % If only one value is given for dimentions, replicate value for both axes
-if length(dims) == 1; dims = [dims dims]; end
+if length(dims) == 1, dims = [dims dims]; end
 % Set the extent of blurring at the border of the circle between 0 and 1.  
 % This is comprable to anti-aliasing the circle
 border = 0.05;
@@ -38,7 +53,7 @@ y = round(dims(2) * (0.9^(dims(2)-23)+1));
 dd = sqrt(xx.^2 + yy.^2);
 img = taper(dd) + taper(-dd) - 1; % Border anti-aliasing
 img = [rot90(img,2), flipud(img); fliplr(img), img]; % Put quarters together
-img = iff(isa(img, 'sig.Signal'), @()img.map(@single), @()single(img));
+img = single(img);
   function y = taper(x)
     % Applies a tapering function to the matrix x
     %  Creates a normalized image containing a curve of a given radius and
@@ -48,16 +63,4 @@ img = iff(isa(img, 'sig.Signal'), @()img.map(@single), @()single(img));
     y = 0.5*(erf(y) + 1);
   end
 
-%% Layer properties
-% Use empty texture layer as template
-layer = vis.emptyLayer();
-% Linear interpolation smooths contour when scaled
-layer.interpolation = 'linear';
-% Set the position and orientation of the texture
-layer.texOffset = pos;
-layer.texAngle = orientation;
-% Scale texture to the desired dimentions
-layer.size = dims;
-% Ensure texture is not repeated across the screen
-layer.isPeriodic = false;
 end
