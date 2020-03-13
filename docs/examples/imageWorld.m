@@ -57,7 +57,7 @@ evts.num = number;
 % column is a condition.  All conditional paramters must have the same
 % number of columns.
 try
-  imgDir = '\\zserver.cortexlab.net\Data\pregenerated_textures\Marius\proc\selection2800';
+  imgDir = fullfile(fileparts(mfilename('fullpath')), 'sample_images');
   p.imgDir = imgDir;
   p.onDuration = 5; % How long to present each image for (seconds)
   p.offDuration = 2; % Time between each image presentation (seconds)
@@ -118,6 +118,5 @@ function img = rescale(img)
 %  The original image set this was written for comprised arrays of values
 %  normalized between -1 and 1.  This helper function rescales them to the
 %  correct range.  Note that images may also be between 0 and 1.
-img = max(img,-1); img = min(img, 1);
-img = (img*128+128);
+img = vis.rgbaFromUint8(uint8(127.5*(1 + img)), 1);
 end
