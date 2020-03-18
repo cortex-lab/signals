@@ -19,12 +19,14 @@ classdef Signals_test < matlab.unittest.TestCase
       testCase.B = testCase.net.origin('b');
       testCase.C = testCase.net.origin('c');
       
-      testCase.addTeardown(@delete, [testCase.A, testCase.B, testCase.C])
+      testCase.addTeardown(@delete, testCase.A)
+      testCase.addTeardown(@delete, testCase.B)
+      testCase.addTeardown(@delete, testCase.C)
     end
   end
   
   methods (Test)
-    function testMap(testCase)
+    function test_map(testCase)
       % Tests for map method
       [a, c] = deal(testCase.A, testCase.C);
       
@@ -48,7 +50,7 @@ classdef Signals_test < matlab.unittest.TestCase
       % No new changes in network;
       args = {testCase.net.Id, a.Node.Id, [], @identity};
       [~, valset] = sig.transfer.map(args{:});
-      testCase.verifyTrue(~valset, 'Expected ''valset'' to be false')
+      testCase.verifyFalse(valset, 'Expected ''valset'' to be false')
       % Update one of the input nodes
       actual = submit(testCase.net.Id, a.Node.Id, v);
       testCase.verifyEqual(sort([a.Node.Id; b.Node.Id]), actual, ...
@@ -68,7 +70,7 @@ classdef Signals_test < matlab.unittest.TestCase
       testCase.verifyMatches(b.Name, '\w+\.map\(\w+\)', 'Unexpected Name')
     end
     
-    function testMapn(testCase)
+    function test_mapn(testCase)
       % Tests for mapn method
       [a, b] = deal(testCase.A, testCase.B);
       
@@ -102,7 +104,7 @@ classdef Signals_test < matlab.unittest.TestCase
       % No new changes in network;
       args = {testCase.net.Id, [a.Node.Id, b.Node.Id], [], {@meshgrid, 1}};
       [~, valset] = sig.transfer.mapn(args{:});
-      testCase.verifyTrue(~valset, 'Expected ''valset'' to be false')
+      testCase.verifyFalse(valset, 'Expected ''valset'' to be false')
       % Update one of the input nodes
       actual = submit(testCase.net.Id, a.Node.Id, xx);
       testCase.verifyEqual(sort([a.Node.Id; X.Node.Id; Y.Node.Id]), actual, ...
@@ -110,6 +112,35 @@ classdef Signals_test < matlab.unittest.TestCase
       [val, valset] = sig.transfer.mapn(args{:});
       testCase.verifyTrue(valset, 'Expected ''valset'' to be true')
       testCase.verifyEqual(val, expectedX, 'Failed to re-evaluate function')
+    end
+    
+    function test_merge(testCase)
+      % Tests for map method
+      [a, b, c] = deal(testCase.A, testCase.B, testCase.C);
+      
+      % Test merge
+      m = merge(a, b, c);
+      testCase.verifyMatches(m.Name, '( \w ~ \w ~ \w )', 'Unexpected Name')
+      for s = {c, b, a, b}
+        v = rand;
+        post(s{1}, v)
+        testCase.verifyEqual(m.Node.CurrValue, v, 'Unexpected output using merge')
+      end
+      
+      % Test transfer function directly
+      % No new changes in network;
+      ids = @(varargin) cellfun(@(s) s.Node.Id, varargin);
+      args = {testCase.net.Id, ids(a, b, c), m.Node.Id};
+      [~, valset] = sig.transfer.merge(args{:});
+      testCase.verifyFalse(valset, 'Expected ''valset'' to be false')
+      % Update one of the input nodes
+      expected = sort(ids(m, b));
+      actual = submit(testCase.net.Id, b.Node.Id, rand);
+      testCase.verifyEqual(expected(:), actual, ...
+        'Unexpected affected node indicies returned')
+      [val, valset] = sig.transfer.merge(args{:});
+      testCase.verifyTrue(valset, 'Expected ''valset'' to be true')
+      testCase.verifyEqual(val, b.Node.WorkingValue, 'Failed to re-evaluate function')
     end
     
     function test_size(testCase)
@@ -146,8 +177,10 @@ classdef Signals_test < matlab.unittest.TestCase
       
       % 2 inputs, 2 outputs
       [~, sz] = size(a, 2);  %#ok<*ASGLU>
-      testCase.verifyError(@()a.post(1:n), 'MATLAB:maxlhs', ...
-        'Unexpected error identifier')
+      % Note in 2019b error id changed
+      id = iff(verLessThan('matlab', '9.7'), ...
+          'MATLAB:maxlhs', 'MATLAB:size:NumOutNotEqualNumDims');
+      testCase.verifyError(@()a.post(1:n), id, 'Unexpected error identifier')
     end
     
     function test_output(testCase)

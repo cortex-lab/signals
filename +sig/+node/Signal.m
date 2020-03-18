@@ -197,35 +197,14 @@ classdef Signal < sig.Signal & handle
       if net.Debug; net.NodeName(b.Node.Id) = b.Name; end
     end
     
-%     function b = bufferUpTo(this, nSamples)
-%       
-%       % Create a scanner that pairs the value with the sample count
-%       value_count = scan(this, fun.restrictScope(@(v,acc){v acc{2}+1}), {[] 0});
-%       % Scan this info to accumulate and slice an array
-%       circ_count = scan(value_count, @circbuff, {[] []});
-%       b = map(circ_count, @recent);
-%       b.Node.DisplayInputs = this.Node;
-%       b.Node.FormatSpec = sprintf('%%s.bufferUpTo(%i)', nSamples);
-%       function circ_cnt = circbuff(val_cnt, circ_cnt)
-%         circ_cnt{2} = val_cnt{2};
-%         if numel(circ_cnt{1}) < nSamples % grow stage
-%           circ_cnt{1} = [circ_cnt{1} val_cnt{1}];
-%         else % slice into next circular position
-%           idx = mod(val_cnt{2} - 1, nSamples) + 1;
-%           circ_cnt{1}(idx) = val_cnt{1};
-%         end
-%       end
-%       function buff = recent(circ_cnt)
-%         if numel(circ_cnt{1}) < nSamples % grow stage
-%           buff = circ_cnt{1};
-%         else
-%           reslice = mod((-nSamples:-1) + circ_cnt{2}, nSamples) + 1;
-%           buff = circ_cnt{1}(reslice);
-%         end
-%       end
-%     end
-
     function m = merge(varargin)
+      % m = merge(s1...sN) returns a signal which takes the value of the
+      % most recent input signal to update. If multiple signals update
+      % during the same transaction, the signal value which occurs earlier
+      % in the input argument list is used.
+      %
+      % Example:
+      %   latest = a.merge(b)
       formatSpec = ['( ' strJoin(repmat({'%s'}, 1, nargin), ' ~ ') ' )'];      
       m = applyTransferFun(varargin{:}, 'sig.transfer.merge', [], formatSpec);
     end
@@ -451,32 +430,32 @@ classdef Signal < sig.Signal & handle
     end
     
     function qevt = setEpochTrigger(newPeriod, t, x, threshold)
-      % returns a signal that is triggered (`qevt`) when another signal
-      % (`x`) doesn't change over some time period signified by a third
-      % signal (`newPeriod`)
+      % returns a signal that is triggered when another signal doesn't
+      % change over some time period
       %
       % Inputs:
-      %   `newPeriod` - a signal containing the period of time over which
-      %   to check if signal `x` has had its value changed more than
-      %   `threshold`
-      %   `t` - a signal for time-keeping
-      %   `x` - a signal that triggers `qevt` when its value doesn't change
-      %   by more than `threshold` over `newPeriod`
-      %   `threshold` - a numeric value that sets the maximum amount `x`
-      %   can change by within `newPeriod` to trigger `qevt`
+      %   newPeriod - a signal containing the period of time over which
+      %     to check if signal x has had its value changed more than
+      %     the threshold
+      %   t - a signal for time-keeping
+      %   x - a signal that triggers qevt when its value doesn't change
+      %     by more than threshold over newPeriod
+      %   threshold - a numeric value that sets the maximum amount x
+      %     can change by within newPeriod to trigger qevt
       %
       % Outputs:
-      %   `qevt` - a signal that is triggered when `x` changes by less than
-      %   `threshold` over `newPeriod`
+      %   qevt - a signal that is triggered when x changes by less than
+      %     threshold over newPeriod
       
       if nargin < 4
         threshold = 0;
       end
+      [initState, tUpdate, xUpdate] = sig.scan.quescienceWatch;
       
-      newState = newPeriod.map(@initState);
+      newState = newPeriod.map(initState);
       
-      state = scan(t.delta(), @tUpdate,... scan time increments
-        x.delta(), @xUpdate,... scan x deltas
+      state = scan(t.delta(), tUpdate,... scan time increments
+        x.delta(), xUpdate,... scan x deltas
         newState,... initial state on arming trigger
         'pars', threshold); % parameters
       state = state.subscriptable(); % allow field subscripting on state
@@ -484,36 +463,7 @@ classdef Signal < sig.Signal & handle
       % event signal is derived by monitoring the 'armed' field of state
       % for new false values (i.e. when the armed trigger is released).
       qevt = state.armed.skipRepeats().not().then(true);
-      %TODO Set nice format spec here?
-      % helper functions
-      
-      function state = initState(dur)
-        % return initial trigger state
-        state = struct('win', dur, 'remaining', dur, 'mvmt', 0, 'armed', true);
-      end
-      
-      function state = tUpdate(state, dt, ~)
-        % update trigger state based on a time increment
-        if state.armed % decrement time remaining until quiescent period met
-          state.remaining = max(state.remaining - dt, 0);
-          if state.remaining == 0 % time's up, trigger can be released
-            state.armed = false; % state is now released
-          end
-        end
-      end
-      
-      function state = xUpdate(state, dx, thresh)
-        % update trigger state based on a delta in the signal that must stay below
-        % threshold
-        if state.armed
-          state.mvmt = state.mvmt + abs(dx); % accumulate the delta
-          if state.mvmt > thresh % reached threshold, so reset
-            state.mvmt = 0;
-            state.remaining = state.win;
-          end
-        end
-      end
-      
+      %TODO Set nice format spec here?      
     end
     
     function n = node(this)

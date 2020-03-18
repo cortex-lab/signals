@@ -8,21 +8,11 @@ classdef Signal < handle
   %   this is SIG.NODE.SIGNAL.
   %
   %   Example: 
-  %     create a Signals network and three origin signals
   %     net = sig.Net;
-  %     os1 = net.origin('input 1');
-  %     os2 = net.origin('input 2');
-  %     os3 = net.origin('input 3');
+  %     a = net.origin('A');
+  %     b = a^2;
   %
   % See also SIG.NODE.SIGNAL, SIG.NET
-  %
-  % *Note: when running the example code for the below methods, continue
-  % from the 'Running Example' code written above
-  %
-  % @todo edit method descriptions
-  % @body move long method examples/descriptions from here to
-  % tutorials section, then reset examples/descriptions to something
-  % similar Chris' originals
   
   %% Abstract methods
   methods (Abstract)
@@ -113,6 +103,8 @@ classdef Signal < handle
     %   threshold = interactiveOn.setTrigger(displacement >= targetAzimuth);
     
     tr = setTrigger(arm, release)
+    
+    tr = setEpochTrigger(arm, release, t, threshold) 
     
     % ds = s.map(f, [formatSpec]) returns a signal which takes the value
     % resulting from mapping function f onto the value in s (i.e. f(s)). If
@@ -269,18 +261,13 @@ classdef Signal < handle
     
     l = log(this)
     
-    % 'ds = s1.merge(s2...sN)' returns a dependent signal 'ds' which takes
-    % as value the value of the most recent input signal to update. If 
-    % multiple signals update during the same transaction, 'ds' will update
-    % to the signal which is earlier in the input argument list 
+    % m = merge(s1...sN) returns a signal which takes the value of the most
+    % recent input signal to update. If multiple signals update during the
+    % same transaction, the signal value which occurs earlier in the input
+    % argument list is used.
     %
     % Example:
-    %   ds1 = os1.at(os3);
-    %   ds17 = os1.merge(os2,ds1,os3);
-    %   ds17Out = output(ds17);
-    %   os1.post(1); % '1' will be displayed
-    %   os2.post(2); % '2' will be displayed
-    %   os3.post(3); % '1' will be displayed
+    %   latest = a.merge(b)
     
     m = merge(this, varargin)
     
