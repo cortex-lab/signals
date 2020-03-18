@@ -26,6 +26,90 @@ classdef Signals_test < matlab.unittest.TestCase
   end
   
   methods (Test)
+    function test_bufferUpTo(testCase)
+      % Test for bufferUpTo method
+      a = testCase.A;
+      b = a.bufferUpTo(3);
+      
+      a.post(randi(1e4))
+      testCase.verifyEqual(b.Node.CurrValue, a.Node.CurrValue, ...
+        'Unexpected output when bufferUpTo')
+      testCase.verifyMatches(b.Name, '\w+\.bufferUpTo\(\d+)', 'Unexpected Name')
+
+      % Test filling buffer
+      vals = rand(1,4);
+      arrayfun(@(v) a.post(v), vals)
+      testCase.verifyEqual(b.Node.CurrValue, vals(end-2:end), ...
+        'Fails to buffer up to sample number')
+      
+      % Test transfer function directly; no new changes in network
+      % ids = pick([b.Node.Inputs], 'Id') % Same as below, requires Rigbox
+      inIds = arrayfun(@(n) n.Id, b.Node.Inputs);
+      args = {testCase.net.Id, inIds, b.Node.Id};
+      [~, valset] = sig.transfer.buffer(args{:});
+      testCase.verifyFalse(valset, 'Expected ''valset'' to be false')
+      
+      % Update one of the input nodes
+      expected = sort(cellfun(@(n) n.Node.Id, {a,b}));
+      actual = submit(testCase.net.Id, a.Node.Id, rand);
+      testCase.verifyEqual(expected(:), actual, ...
+        'Unexpected affected node indicies returned')
+      [val, valset] = sig.transfer.buffer(args{:});
+      testCase.verifyTrue(valset, 'Expected ''valset'' to be true')
+      testCase.verifyEqual(val(end), a.Node.WorkingValue, 'Failed to re-evaluate function')
+      
+      % Test N samples as signal
+      b = testCase.B;
+      buff = a.bufferUpTo(b);
+      testCase.verifyMatches(buff.Name, '\w+\.bufferUpTo\(\w+)', 'Unexpected Name')
+      
+      % No updates until n samples defined
+      a.post(rand)
+      inIds = arrayfun(@(n) n.Id, buff.Node.Inputs);
+      args = {testCase.net.Id, inIds, buff.Node.Id};
+      [~, valset] = sig.transfer.buffer(args{:});
+      testCase.verifyFalse(valset, 'Expected ''valset'' to be false')
+      
+      % Initialize N samples
+      n = 3;
+      b.post(n), arrayfun(@(v) a.post(v), rand(1,n))
+      expected = ...
+        numel(buff.Node.CurrValue) == n && ...
+        buff.Node.CurrValue(end) == a.Node.CurrValue;
+      testCase.verifyTrue(expected, ...
+        'Unexpected output when nSamples is signal')
+      
+      % Test restricting n samples
+      b.post(b.Node.CurrValue-1)
+      [~, valset] = sig.transfer.buffer(args{:});
+      testCase.verifyFalse(valset, 'Expected ''valset'' to be false')
+      a.post(rand)
+      expected = ...
+        numel(buff.Node.CurrValue) == n-1 && ...
+        buff.Node.CurrValue(end) == a.Node.CurrValue;
+      testCase.verifyTrue(expected, ...
+        'Unexpected output when nSamples is signal')
+    end
+    
+    function test_buffer(testCase)
+      % Test for buffer method.  For thorough testing use test_bufferUpTo
+      a = testCase.A;
+      n = 3;
+      b = a.buffer(n);
+      
+      % Test unfilled buffer
+      a.post(rand)
+      testCase.verifyEmpty(b.Node.CurrValue, ...
+        'Expected buffer to be uninitialized while nUpdates < n')
+      testCase.verifyMatches(b.Name, '\w+\.buffer\(\d+)', 'Unexpected Name')
+
+      % Test filling buffer
+      vals = rand(1,n);
+      arrayfun(@(v) a.post(v), vals)
+      testCase.verifyEqual(b.Node.CurrValue, vals(end-2:end), ...
+        'Fails to buffer up to sample number')
+    end
+      
     function test_map(testCase)
       % Tests for map method
       [a, c] = deal(testCase.A, testCase.C);

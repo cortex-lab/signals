@@ -119,7 +119,7 @@ classdef Signal < sig.Signal & handle
       % formatting
       funStrs = mapToCell(@toStr, funcs);
       elemStrs = mapToCell(@(e)'%s', elems);
-      formatSpec = ['%s.scan(' strJoin(reshape([elemStrs; funStrs], 1, []), ', ') ')'];
+      formatSpec = ['%s.scan(' strJoin(reshape([funStrs; elemStrs], 1, []), ', ') ')'];
       if ~isempty(pars)
         formatSpec = [formatSpec '[' strJoin(mapToCell(@(e)'%s', pars), ', ') ']'];
       end
@@ -179,20 +179,35 @@ classdef Signal < sig.Signal & handle
     end
     
     function b = bufferUpTo(this, nSamples)
-      
-      % @todo implement as a transfer function
-      b = scan(this, sig.scan.buffering(nSamples), []);
-      b.Node.FormatSpec = sprintf('%%s.bufferUpTo(%i)', nSamples);
+      % b = s.bufferUpTo(n) returns a signal which holds an array of values
+      % of the input signal for the last nSamples. nSamples may be a whole
+      % number or a signal.
+      %
+      % Example:
+      %   latest = s.bufferUpTo(5)
+      formatSpec = '%s.bufferUpTo(%s)';
+      b = applyTransferFun(this, nSamples, 'sig.transfer.buffer', [], formatSpec);
       net = b.Node.Net;
       if net.Debug; net.NodeName(b.Node.Id) = b.Name; end
     end
     
     function b = buffer(this, nSamples)
+      % b = s.buffer(n) returns a signal which holds the last n values
+      % the input signal.  The number of samples to buffer may be a whole
+      % number or a signal.  Unlike bufferUpTo, buffer will not update until
+      % the signal to buffer has updated at least n times.
+      %
+      % Example:
+      %   % Buffer the last 5 values of 's'
+      %   latest = s.buffer(5)
+      %
+      % See also SIG.SIGNAL.BUFFERUPTO
+      
       buffupto = bufferUpTo(this, nSamples);
       nelem = size(buffupto, 2);
       b = buffupto.keepWhen(nelem == nSamples);
-      b.Node.DisplayInputs = this.Node;
-      b.Node.FormatSpec = sprintf('%%s.buffer(%i)', nSamples);
+      b.Node.DisplayInputs = buffupto.Node.DisplayInputs;
+      b.Node.FormatSpec = '%s.buffer(%s)';
       net = b.Node.Net;
       if net.Debug; net.NodeName(b.Node.Id) = b.Name; end
     end
@@ -205,6 +220,7 @@ classdef Signal < sig.Signal & handle
       %
       % Example:
       %   latest = a.merge(b)
+      %   latest.Name % a ~ b
       formatSpec = ['( ' strJoin(repmat({'%s'}, 1, nargin), ' ~ ') ' )'];      
       m = applyTransferFun(varargin{:}, 'sig.transfer.merge', [], formatSpec);
     end

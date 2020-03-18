@@ -188,33 +188,28 @@ classdef Signal < handle
     
     d = delta(this)
     
-    % 'ds = s1.bufferUpTo(n)' returns a dependent signal 'ds' which takes 
-    % as value the last 'n' values 's1' took. When the number of updates
-    % of 's1' is fewer than 'n', 'ds' takes as value all of those updates.
-    % 
+    % b = s.bufferUpTo(n) returns a signal which holds the last n values
+    % the input signal.  The number of samples to buffer may be a whole
+    % number or a signal.
+    %
     % Example:
-    %   ds12 = os1.bufferUpTo(3);
-    %   ds12Out = output(ds12);
-    %   os1.post(1); % '1' will be displayed
-    %   os1.post(2); % '[1 2]' will be displayed
-    %   os1.post(3); % '[1 2 3]' will be displayed
-    %   os1.post(4); % '[2 3 4]' will be displayed
+    %   % Buffer the last 5 values of 's'
+    %   latest = s.bufferUpTo(5)
     %
     % See also SIG.SIGNAL.BUFFER
     
     b = bufferUpTo(this, nSamples)
     
-    % 'ds = s1.buffer(n)' returns a dependent signal 'ds' which takes as
-    % value the last 'n' values 's1' took. When the number of updates of
-    % 's1' is fewer than 'n', 'ds' takes no value.
+    % b = s.buffer(n) returns a signal which holds the last n values
+    % the input signal.  The number of samples to buffer may be a whole
+    % number or a signal.  Unlike bufferUpTo, buffer will not update until
+    % the signal to buffer has updated at least n times.  
     %
     % Example:
-    %   ds13 = os1.buffer(3);
-    %   ds13Out = output(ds13);
-    %   os1.post(1); % nothing will be displayed
-    %   os1.post(2); % nothing will be displayed
-    %   os1.post(3); % '[1 2 3]' will be displayed
-    %   os1.post(4); % '[2 3 4]' will be displayed
+    %   % Buffer the last 5 values of 's'
+    %   latest = s.buffer(5)
+    %
+    % See also SIG.SIGNAL.BUFFERUPTO
     
     b = buffer(this, nSamples)
     

@@ -9,8 +9,8 @@ function [val, valset] = merge(net, inputs, ~, ~)
 %       through a function
 %
 %   Outputs:
-%     val - the working node value of the first input node with a working 
-%       value set.
+%     val (*) - the working node value of the first input node with a  
+%       working value set.
 %     valset (logical) - true if any input nodes have a working value.
 %
 %   Example:
@@ -25,8 +25,9 @@ for inp = 1:numel(inputs)
   if set
     val = v;
     valset = true;
-    return;
+    return % new value set for input, no need to go further
   end
 end
+% no new values set, end here
 val = [];
 valset = false;
