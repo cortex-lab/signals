@@ -77,34 +77,41 @@ classdef Signal < handle
     
     s = keepWhen(what, when)
     
-    % 'ds = s1.to(s2)' returns a dependent signal 'ds' which can only ever
-    % take a value of 1 or 0. 'ds' initially takes a value of 1 when 's1'
-    % takes a truthy value. 'ds' then alternates between updating to '0'
-    % the first time 's2' updates to a truthy value after 's1' has updated
-    % to a truthy value, and updating to '1' the first time 's1' updates
-    % to a truthy value after 's2' has updated to a truthy value.
+    % p = a.to(b) returns a dependent signal with a logical value. When 'a'
+    % updates with a non-zero value, 'p' updates with true until 'b'
+    % updates with a non-zero value. In this was 'p' is true between
+    % updates of 'a' and 'b'.
     %
     % Example:
-    %   ds4 = os1.to(os2);
-    %   ds4Out = output(ds4);
-    %   os1.post(1); % '1' will be displayed
-    %   os1.post(2); % nothing will be displayed
-    %   os2.post(1); % '0' will be displayed
-    %   os1.post(0); % nothing will be displayed
-    %   os1.post(1); % '1' will be displayed
+    %   % Signal indicating when stimulus shown
+    %   stimulusOn = onset.to(offset);
     
     p = to(a, b)
     
-    % 'tr = arm.setTrigger(release)' returns a dependent signal that is true
-    % only when `release` evaluates true after `arm`.
+    % tr = arm.setTrigger(release) returns a dependent signal that is true
+    % only when 'release' evaluates true after 'arm'.
     %
     % Example:
-    %   % Threshold may be reached only once every interactive phase:
-    %   threshold = interactiveOn.setTrigger(displacement >= targetAzimuth);
+    %   % Signal response made once per closed loop period:
+    %   release = abs(wheelMovement)>=60 | trialTimeout;
+    %   responseMade = closedLoopStart.setTrigger(release);
+    %
+    % See also SIG.SIGNAL/SETEPOCHTRIGGER
     
     tr = setTrigger(arm, release)
     
-    tr = setEpochTrigger(arm, release, t, threshold) 
+    % tr = period.setEpochTrigger(t, x[, threshold]) returns a dependent
+    % signal that is true only when the change in 'x' remains less than
+    % 'threshold' for the duration of 'period'.  
+    %
+    % Example:
+    %   % Threshold may be reached only once every interactive phase:
+    %   quiescenceWatchEnd = quiescentDuration.setEpochTrigger(...
+    %     t, wheelPosition, p.preStimQuiescentThreshold);
+    %
+    % See also SIG.SIGNAL/SETTRIGGER
+    
+    tr = setEpochTrigger(period, t, x, threshold) 
     
     % ds = s.map(f, [formatSpec]) returns a signal which takes the value
     % resulting from mapping function f onto the value in s (i.e. f(s)). If
@@ -196,7 +203,7 @@ classdef Signal < handle
     %   % Buffer the last 5 values of 's'
     %   latest = s.bufferUpTo(5)
     %
-    % See also SIG.SIGNAL.BUFFER
+    % See also SIG.SIGNAL/BUFFER
     
     b = bufferUpTo(this, nSamples)
     
@@ -209,7 +216,7 @@ classdef Signal < handle
     %   % Buffer the last 5 values of 's'
     %   latest = s.buffer(5)
     %
-    % See also SIG.SIGNAL.BUFFERUPTO
+    % See also SIG.SIGNAL/BUFFERUPTO
     
     b = buffer(this, nSamples)
     
@@ -224,7 +231,7 @@ classdef Signal < handle
     %   os1.post(2); nothing will be displayed
     %   os1.post(3); '3' will be displayed
     %
-    % See also SIG.SIGNAL.BUFFER, SIG.SIGNAL.DELAY
+    % See also SIG.SIGNAL/BUFFER, SIG.SIGNAL/DELAY
     
     d = lag(this, n)
     

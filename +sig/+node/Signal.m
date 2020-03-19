@@ -226,11 +226,51 @@ classdef Signal < sig.Signal & handle
     end
     
     function p = to(a, b)
+      % p = a.to(b) returns a dependent signal with a logical value. When
+      % 'a' updates with a non-zero value, 'p' updates with true until 'b'
+      % updates with a non-zero value. In this was 'p' is true between
+      % updates of 'a' and 'b'.  Updates to either of these signals
+      % multiple times in a row does not affect the value of 'p'.
+      %
+      % Inputs:
+      %   a - a signal that causes 'p' to update true when it updates
+      %     with a non-zero value 
+      %   b - a signal that causes 'p' to update false when it updates
+      %     with a non-zero value
+      %
+      % Outputs:
+      %   p - a signal that updates to true after 'set' and 'release'
+      %     update in that order
+      %
+      % Example:
+      %   % Signal indicating when stimulus shown
+      %   stimulusOn = onset.to(offset);
+      
       p = applyTransferFun(a, b, 'sig.transfer.latch', [], '%s.to(%s)');
       p.Node.CurrValue = false;
     end
     
     function tr = setTrigger(set, release)
+      % tr = set.setTrigger(release) returns a dependent signal that is
+      % true only when 'release' evaluates true after 'set' updates.  If
+      % release updates a second time after 'set', tr will not update.
+      %
+      % Inputs:
+      %   set - a signal that arms the trigger each time it updates with a
+      %     non-zero value
+      %   release - when this signal updates with a non-zero value after
+      %     'set' updates, 'tr' updates with true
+      %
+      % Outputs:
+      %   tr - a signal that updates to true after 'set' and 'release'
+      %     update in that order
+      %
+      % Example:
+      %   % Signal response made once per closed loop period:
+      %   release = abs(wheelMovement)>=60 | trialTimeout;
+      %   responseMade = closedLoopStart.setTrigger(release);
+      %
+      % See also SIG.NODE.SIGNAL/SETEPOCHTRIGGER
       armed = set.to(release);
       tr = at(true, ~armed); % samples true each time armed goes to false
       tr.Node.FormatSpec = '%s.setTrigger(%s)';
@@ -239,44 +279,61 @@ classdef Signal < sig.Signal & handle
       if net.Debug; net.NodeName(tr.Node.Id) = tr.Name; end
     end
     
-    function tr = setEpochTrigger(newPeriod, t, x, threshold)
-      % returns a signal that is triggered when another signal doesn't
-      % change over some time period
+    function tr = setEpochTrigger(period, t, x, threshold)
+      % tr = period.setEpochTrigger(t, x[, threshold]) returns a signal that
+      % is true when another signal doesn't change over some time period.
+      % The signals 'period' and 't' do not necessarily need to represent
+      % time, they are evaluated in a similar way to 'x' and 'threshold'.
+      % The trigger is reset each time 'period' updates.
       %
       % Inputs:
-      %   newPeriod - a signal containing the period of time over which
-      %     to check if signal x has had its value changed more than
-      %     the threshold
+      %   period - a signal containing the period of time over which
+      %     to check if signal 'x' has had its value changed more than
+      %     the 'threshold'
       %   t - a signal for time-keeping
-      %   x - a signal that triggers qevt when its value doesn't change
-      %     by more than threshold over newPeriod
-      %   threshold - a numeric value that sets the maximum amount x
-      %     can change by within newPeriod to trigger qevt
+      %   x - a signal that triggers 'tr' when its value doesn't change
+      %     by more than 'threshold' over 'period'
+      %   threshold - an optional numeric value that sets the maximum
+      %     amount 'x' can change by within 'period' to trigger 'tr'.
+      %     Default 0.
       %
       % Outputs:
-      %   qevt - a signal that is triggered when x changes by less than
-      %     threshold over newPeriod
-      
+      %   tr - a signal that is triggered when 'x' changes by less than
+      %     'threshold' over 'period'
+      %
+      % Example:
+      %   % Threshold may be reached only once every interactive phase:
+      %   quiescenceWatchEnd = quiescentDuration.setEpochTrigger(...
+      %     t, wheelPosition, p.preStimQuiescentThreshold);
+      %
+      % See also SIG.NODE.SIGNAL/SETTRIGGER
+
+      % Parse inputs
       if nargin < 4, threshold = 0; end
+      % Get functions for the scanning signal
       [initState, tUpdate, xUpdate] = sig.scan.quiescienceWatch;
-      
-      newState = newPeriod.map(initState);
-      
+      % Each time period updates, return a default state structure
+      newState = period.map(initState);
+      % Update state structure each when t and x signals change
       state = scan(t.delta(), tUpdate,... scan time increments
-        x.delta(), xUpdate,... scan x deltas
-        newState,... initial state on arming trigger
-        'pars', threshold); % parameters
+                   x.delta(), xUpdate,... scan x deltas
+                   newState,... initial state on arming trigger
+                   'pars', threshold); % parameters
       state = state.subscriptable(); % allow field subscripting on state
       
       % event signal is derived by monitoring the 'armed' field of state
       % for new false values (i.e. when the armed trigger is released).
       armed = subsref(state, struct('type', '.', 'subs', 'armed'));
+      % Update to true; update only when trigger released
       tr = armed.skipRepeats().not().then(true);
+      % Configure the format specification
       tr.Node.DisplayInputs = [
-        state.Node.DisplayInputs([2,1,4,1]) newPeriod.Node];
+        state.Node.DisplayInputs([2,1,4,1]) period.Node];
       tr.Node.FormatSpec = '%s/%s < %s s.t. %s = %s';
       % Set armed to false
       tr.Node.CurrValue = false;
+      net = tr.Node.Net;
+      if net.Debug; net.NodeName(tr.Node.Id) = tr.Name; end
     end
     
     function nr = skipRepeats(this)

@@ -1,7 +1,7 @@
 classdef SubscriptableSignal < sig.node.Signal
-  %sig.SubscriptableSignal Dot syntax subscripting derives a new a signal
-  %   A sig.SubscriptableSignal `s` can be subscripted to obtain a new
-  %   signal whose value results from subscripting the value of `s`.
+  %sig.SubscriptableSignal Dot syntax subscripting to derive new signals
+  %   A sig.SubscriptableSignal can be subscripted to obtain a new
+  %   signal whose value results from subscripting the parent's value.
   
   properties
     CacheSubscripts = false
@@ -16,10 +16,6 @@ classdef SubscriptableSignal < sig.node.Signal
     Reserved
   end
   
-%   properties (Dependent)
-%     Subscriptable
-%   end
-  
   methods
     function this = SubscriptableSignal(node, deep)
       this = this@sig.node.Signal(node);
@@ -28,7 +24,7 @@ classdef SubscriptableSignal < sig.node.Signal
         this.Deep = deep;
       end
       this.Reserved = [methods('sig.node.Signal'); 'Name'; 'Node'
-        'CacheSubscripts'; 'Subscripts'; 'Reserved'; 'Deep']; % Added MW 02/2018
+        'CacheSubscripts'; 'Subscripts'; 'Reserved'; 'Deep'];
     end
     
     function this = subscriptable(this) % just return this
