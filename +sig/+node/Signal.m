@@ -239,6 +239,46 @@ classdef Signal < sig.Signal & handle
       if net.Debug; net.NodeName(tr.Node.Id) = tr.Name; end
     end
     
+    function tr = setEpochTrigger(newPeriod, t, x, threshold)
+      % returns a signal that is triggered when another signal doesn't
+      % change over some time period
+      %
+      % Inputs:
+      %   newPeriod - a signal containing the period of time over which
+      %     to check if signal x has had its value changed more than
+      %     the threshold
+      %   t - a signal for time-keeping
+      %   x - a signal that triggers qevt when its value doesn't change
+      %     by more than threshold over newPeriod
+      %   threshold - a numeric value that sets the maximum amount x
+      %     can change by within newPeriod to trigger qevt
+      %
+      % Outputs:
+      %   qevt - a signal that is triggered when x changes by less than
+      %     threshold over newPeriod
+      
+      if nargin < 4, threshold = 0; end
+      [initState, tUpdate, xUpdate] = sig.scan.quiescienceWatch;
+      
+      newState = newPeriod.map(initState);
+      
+      state = scan(t.delta(), tUpdate,... scan time increments
+        x.delta(), xUpdate,... scan x deltas
+        newState,... initial state on arming trigger
+        'pars', threshold); % parameters
+      state = state.subscriptable(); % allow field subscripting on state
+      
+      % event signal is derived by monitoring the 'armed' field of state
+      % for new false values (i.e. when the armed trigger is released).
+      armed = subsref(state, struct('type', '.', 'subs', 'armed'));
+      tr = armed.skipRepeats().not().then(true);
+      tr.Node.DisplayInputs = [
+        state.Node.DisplayInputs([2,1,4,1]) newState.Node];
+      tr.Node.FormatSpec = '%s/%s < %s s.t. %s = %s';
+      % Set armed to false
+      tr.Node.CurrValue = false;
+    end
+    
     function nr = skipRepeats(this)
       nr = applyTransferFun(this, 'sig.transfer.skipRepeats', [],  '(*%s)');
     end
@@ -443,43 +483,6 @@ classdef Signal < sig.Signal & handle
       for ii = 1:n
         callbacks{ii}(newValue);
       end
-    end
-    
-    function qevt = setEpochTrigger(newPeriod, t, x, threshold)
-      % returns a signal that is triggered when another signal doesn't
-      % change over some time period
-      %
-      % Inputs:
-      %   newPeriod - a signal containing the period of time over which
-      %     to check if signal x has had its value changed more than
-      %     the threshold
-      %   t - a signal for time-keeping
-      %   x - a signal that triggers qevt when its value doesn't change
-      %     by more than threshold over newPeriod
-      %   threshold - a numeric value that sets the maximum amount x
-      %     can change by within newPeriod to trigger qevt
-      %
-      % Outputs:
-      %   qevt - a signal that is triggered when x changes by less than
-      %     threshold over newPeriod
-      
-      if nargin < 4
-        threshold = 0;
-      end
-      [initState, tUpdate, xUpdate] = sig.scan.quescienceWatch;
-      
-      newState = newPeriod.map(initState);
-      
-      state = scan(t.delta(), tUpdate,... scan time increments
-        x.delta(), xUpdate,... scan x deltas
-        newState,... initial state on arming trigger
-        'pars', threshold); % parameters
-      state = state.subscriptable(); % allow field subscripting on state
-      
-      % event signal is derived by monitoring the 'armed' field of state
-      % for new false values (i.e. when the armed trigger is released).
-      qevt = state.armed.skipRepeats().not().then(true);
-      %TODO Set nice format spec here?      
     end
     
     function n = node(this)

@@ -7,6 +7,9 @@ function qevt = quiescenceWatch(newPeriod, t, x, threshold)
 %   signal to monitor. 'threshold' optionally specifies the maximum amount
 %   of change to tolerate before restarting the watch period (if
 %   unspecified it defaults to zero).
+%
+% NB: Differences between this and setEpochTrigger: threshold default is 1
+% vs 0; first value is true
 
 if nargin < 4
   threshold = 1;
