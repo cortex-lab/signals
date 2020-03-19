@@ -227,6 +227,47 @@ classdef Signals_test < matlab.unittest.TestCase
       testCase.verifyEqual(val, b.Node.WorkingValue, 'Failed to re-evaluate function')
     end
     
+    function test_setEpochTrigger(testCase)
+      % Test for setEpochTrigger method 
+      [t, dt, x] = deal(testCase.A, testCase.B, testCase.C);
+      t.Name = 'duration'; dt.Name = 't'; x.Name = 'x';
+      tr = setEpochTrigger(t, dt, x);
+      
+      % Verify name
+      str = sprintf('%1$s\\w/%1$s\\w < \\w s.t. %1$s\\w = \\w', char(916));
+      testCase.verifyMatches(tr.Name, str, 'Unexpected Name')
+      
+      % Verify initialized to false
+      testCase.verifyFalse(tr.Node.CurrValue, 'Expected ''valset'' to be false')
+      
+      % Test trigger release
+      dur = 5;
+      t.post(dur)
+      x.post(.1), x.post(.2)
+      dt.post(0), dt.post(dur + 1)
+      testCase.verifyTrue(tr.Node.CurrValue, 'Failed to release trigger')
+      
+      % Test period reset
+      affectedIdxs = submit(testCase.net, t.Node.Id, dur);
+      changed = applyNodes(testCase.net, affectedIdxs);
+      testCase.verifyFalse(ismember(tr.Node.Id, changed), ...
+        'Unexpected update to node''s value')
+      
+      % Test subthreshold time change
+      newt = dt.Node.CurrValue + dur/2;
+      affectedIdxs = submit(testCase.net, dt.Node.Id, newt);
+      changed = applyNodes(testCase.net, affectedIdxs);
+      testCase.verifyFalse(ismember(tr.Node.Id, changed), ...
+        'Unexpected update to node''s value')
+
+      % Test position reset
+      state = tr.Node.Inputs(2).Inputs(1).Inputs(1).Inputs(1);
+      newx = x.Node.CurrValue^2;
+      x.post(newx);
+      testCase.verifyEqual(state.CurrValue.remaining, dur, ...
+        'Failed to reset period')
+    end
+    
     function test_size(testCase)
       % Test for the size method
       a = testCase.A;

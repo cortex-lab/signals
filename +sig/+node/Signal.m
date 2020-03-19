@@ -273,7 +273,7 @@ classdef Signal < sig.Signal & handle
       armed = subsref(state, struct('type', '.', 'subs', 'armed'));
       tr = armed.skipRepeats().not().then(true);
       tr.Node.DisplayInputs = [
-        state.Node.DisplayInputs([2,1,4,1]) newState.Node];
+        state.Node.DisplayInputs([2,1,4,1]) newPeriod.Node];
       tr.Node.FormatSpec = '%s/%s < %s s.t. %s = %s';
       % Set armed to false
       tr.Node.CurrValue = false;
