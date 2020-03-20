@@ -26,7 +26,7 @@ valset = false; val = [];
 [maxSamps, wvset] = workingNodeValue(net, inputs(2));
 if ~wvset % value follows working value first
   [maxSamps, wvset] = currNodeValue(net, inputs(2));
-  if ~wvset % buffer cannot proceed if a maxSamps is missing
+  if ~wvset || ~maxSamps % buffer cannot proceed if a maxSamps is missing or zero
     return;
   end
 end

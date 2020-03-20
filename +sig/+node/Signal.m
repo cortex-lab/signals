@@ -323,7 +323,7 @@ classdef Signal < sig.Signal & handle
       
       % event signal is derived by monitoring the 'armed' field of state
       % for new false values (i.e. when the armed trigger is released).
-      armed = subsref(state, struct('type', '.', 'subs', 'armed'));
+      armed = subsref(state, substruct('.', 'armed'));
       % Update to true; update only when trigger released
       tr = armed.skipRepeats().not().then(true);
       % Configure the format specification
