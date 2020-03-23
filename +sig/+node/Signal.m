@@ -43,8 +43,7 @@ classdef Signal < sig.Signal & handle
     function s = subscriptable(this)
       node = sig.node.Node(this.Node, 'sig.transfer.identity');
       s = sig.node.SubscriptableSignal(node);
-      node.FormatSpec = this.Node.FormatSpec;
-      node.DisplayInputs = this.Node.DisplayInputs;
+      node.FormatSpec = '%s';
       if node.Net.Debug; node.Net.NodeName(node.Id) = this.Name; end
     end
     
