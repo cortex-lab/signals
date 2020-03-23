@@ -8,7 +8,7 @@ function s = sequence(varargin)
 %     seq : An array of values for s to update with.
 %     interval : The time interval between updates in seconds.
 %     delay : The start delay in seconds.  Default: 2.
-%     name : The name of the signal.  Default: 'sequence'.
+%     name : The name of the signal.  Default: 'x'.
 %
 %   Output:
 %     s : The signal whose values will be updated.
@@ -51,6 +51,9 @@ seqSig = net.origin('seq'); seqSig.post(p.seq); % Signal to hold the sequence
 idx = update.scan(@plus, 0); % Signal to index into our sequence
 idx = idx.keepWhen(idx <= length(p.seq)); % Stop when we reach the end
 s = seqSig(idx); % Index into our sequence signal
+if iscell(p.seq) % unwrap
+  s = s.map(@(v) v{:});
+end
 s.Name = p.name;
 
 % When signal falls out of scope, subtract from total number of nodes

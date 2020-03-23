@@ -90,7 +90,9 @@ for i = 1:length(varargin)
       signals{i} = s;
     case {'sig.node.SubscriptableOriginSignal', ...
         'sig.node.SubscriptableSignal'}
-      % TODO
+      % TODO Figure out better way of displaying subscriptable signals
+      names{i} = name;
+      signals{i} = s;
     otherwise
       error('Unrecognized type')
   end
@@ -174,11 +176,25 @@ set(figh, 'DeleteFcn', @(~,~)delete(listeners));
         'Interpreter', 'none');
       % Adjust the y limits to allow space for the text
       ylim(axh(idx), [0 1.5])
+    elseif isstruct(value.x)
+      % If the value is a struct, represent as a string and overwrite
+      % to be struct size;
+      str = toStr(value.x);
+      value.x = numel(struct); % 0 if empty, 1 is scalar, n for nonscalar
+      % Set the mode to be 1 - a series of discrete values
+      mode(idx) = 1;
+      % Add the string to the plot as a text annotation
+      text(axh(idx), value.t-tstart, value.x+0.1, str,...
+        'HorizontalAlignment', 'center',...
+        'VerticalAlignment', 'bottom', ...
+        'Interpreter', 'none');
+      % Adjust the y limits to allow space for the text
+      ylim(axh(idx), [0 1.5])
     elseif numel(value.x) > 1
       % If the value is numrical array, store the size of the array as a
       % string and overwrite the value to be the number of elements in the
       % array
-      str = num2str(size(value.x));
+      str = ['[' num2str(size(value.x)) ']'];
       % The y axis is now the size of the array
       ylabel(axh(idx),'size')
       value.x = numel(value.x);
