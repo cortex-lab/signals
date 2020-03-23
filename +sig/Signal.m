@@ -497,6 +497,17 @@ classdef Signal < handle
       x = map(strSig, @str2num, 'str2num(%s)');
     end
     
+    function x = num2str(numSig, precision)
+      % New signal carrying numeric-to-charecter converted array of the
+      % input signal
+      narginchk(1,2)
+      if nargin == 1
+        x = map(numSig, @num2str, 'num2str(%s)');
+      else
+        x = map2(numSig, precision, @num2str, 'num2str(%s)');
+      end
+    end
+    
     function b = round(a,N,type)
       % New signals carrying the result of rounding 'a' to 'N' digits
       if nargin < 2

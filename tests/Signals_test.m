@@ -438,7 +438,31 @@ classdef Signals_test < matlab.unittest.TestCase
       a.post(x)
       testCase.verifyEqual(b.Node.CurrValue, e)
     end
-    
+
+    function test_str2num(testCase)
+      % Test for the str2num method
+      a = testCase.A;
+      b = a.str2num; % our method to test
+      str = '234.54'; % string to test
+
+      testCase.verifyMatches(b.Name, 'str2num\(\w+\)', 'Unexpected Name')
+      a.post(str)
+      testCase.verifyEqual(b.Node.CurrValue, str2double(str))
+    end
+
+    function test_num2str(testCase)
+      % Test for the num2str method
+      a = testCase.A;
+      b = num2str(a); % our method to test
+      b_pres = num2str(a, 3);
+      n = rand; % number to convert
+
+      testCase.verifyMatches(b.Name, 'num2str\(\w+\)', 'Unexpected Name')
+      a.post(n)
+      testCase.verifyEqual(b.Node.CurrValue, num2str(n))
+      testCase.verifyEqual(b_pres.Node.CurrValue, num2str(n, 3))
+    end
+
     function test_fliplr(testCase)
       % Test for the fliplr method
       a = testCase.A;
