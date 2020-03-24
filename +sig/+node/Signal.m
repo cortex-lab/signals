@@ -57,6 +57,43 @@ classdef Signal < sig.Signal & handle
       if s.Node.Net.Debug; s.Node.Net.NodeName(s.Node.Id) = s.Name; end
     end
     
+    function s = filter(this, f, criterion)
+      % s = filter(this, f[, criterion]) returns a signal whose values pass
+      % a validation function.  If the function is a char array the
+      % variable may be omitted for brevity, e.g. '~= 2' instead of 'x ~=
+      % 2'.  The values that evaluate to true are kept, unless criterion ==
+      % false, in which case the other values are kept.
+      %
+      % Inputs:
+      %   f (function_handle|char) - a function that returns a logical
+      %     value.
+      %   criterion (logical|sig.Signal) - when true (default) the values 
+      %     that evaluate true are kept.  When false, the values that don't
+      %     pass are kept.
+      %
+      % Outputs:
+      %   tr - a signal that updates to true after 'set' and 'release'
+      %     update in that order
+      %
+      % Examples:
+      %   chrs = x.filter(@ischar);
+      %   positive = x.filter('>0');
+      %   filtered = x.filter(@(x) 5 < x && x < 10);
+      %   outOfRange = x.filter(@(x) 5 < x && x < 10, false);
+      %
+      % See also SIG.NODE.SIGNAL/KEEPWHEN
+      if nargin < 3, criterion = 1; end
+      if ischar(f)
+        f = str2func(['@(x)' iff(f(1) == 'x', f, ['x' f])]);
+      end
+      % Validate the function as best we can
+      assert(nargin(f) > 0, 'function must accept at least one input arg')
+      assert(nargout(f) ~= 0, 'function must return at least one output arg')
+      formatSpec = sprintf('%%s.filter(%s)', toStr(f));
+      s = applyTransferFun(this, criterion, 'sig.transfer.filter', f, formatSpec);
+      s.Node.DisplayInputs = s.Node.Inputs(1); % Don't display criterion
+    end
+    
     function f = keepWhen(what, when)
       f = applyTransferFun(what, when, 'sig.transfer.keepWhen', [], '%s.keepWhen(%s)');
     end
@@ -326,8 +363,9 @@ classdef Signal < sig.Signal & handle
       % Update to true; update only when trigger released
       tr = armed.skipRepeats().not().then(true);
       % Configure the format specification
+      scanNode = state.Node.Inputs;
       tr.Node.DisplayInputs = [
-        state.Node.DisplayInputs([2,1,4,1]) period.Node];
+        scanNode.DisplayInputs([2,1,4,1]) period.Node];
       tr.Node.FormatSpec = '%s/%s < %s s.t. %s = %s';
       % Set armed to false
       tr.Node.CurrValue = false;

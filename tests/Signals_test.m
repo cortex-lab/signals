@@ -109,6 +109,44 @@ classdef Signals_test < matlab.unittest.TestCase
       testCase.verifyEqual(b.Node.CurrValue, vals(end-2:end), ...
         'Fails to buffer up to sample number')
     end
+    
+    function test_filter(testCase)
+      % Tests for filter method
+      [a, b] = deal(testCase.A, testCase.B);
+      f = a.filter(@ischar, b);
+      
+      % Test format specification
+      testCase.verifyMatches(f.Name, '\w+\.filter\(@\w+\)', 'Unexpected Name')
+      
+      b.post(true) % Keep passed
+      [~, set] = currNodeValue(testCase.net.Id, f.Node.Id);
+      testCase.verifyFalse(set, 'Unexpected update')
+      
+      % Test filtering
+      a.post('c')
+      testCase.verifyEqual(f.Node.CurrValue, a.Node.CurrValue, ...
+        'Failed to update with the correct value')
+      a.post(2)
+      testCase.verifyNotEqual(f.Node.CurrValue, a.Node.CurrValue, ...
+        'Failed to discard value')
+      
+      b.post(false) % Keep failed
+      a.post(2)
+      testCase.verifyEqual(f.Node.CurrValue, a.Node.CurrValue, ...
+        'Failed to update with the correct value')
+      a.post('c')
+      testCase.verifyNotEqual(f.Node.CurrValue, a.Node.CurrValue, ...
+        'Failed to discard value')
+      
+      % Test functions are char
+      f = a.filter('~=2');
+      a.post(0)
+      testCase.verifyEqual(f.Node.CurrValue, a.Node.CurrValue, ...
+        'Failed to discard value')
+      a.post(2)
+      testCase.verifyNotEqual(f.Node.CurrValue, a.Node.CurrValue, ...
+        'Failed to update with the correct value')
+    end
       
     function test_map(testCase)
       % Tests for map method
@@ -248,15 +286,15 @@ classdef Signals_test < matlab.unittest.TestCase
       testCase.verifyTrue(tr.Node.CurrValue, 'Failed to release trigger')
       
       % Test period reset
-      affectedIdxs = submit(testCase.net, t.Node.Id, dur);
-      changed = applyNodes(testCase.net, affectedIdxs);
+      affectedIdxs = submit(testCase.net.Id, t.Node.Id, dur);
+      changed = applyNodes(testCase.net.Id, affectedIdxs);
       testCase.verifyFalse(ismember(tr.Node.Id, changed), ...
         'Unexpected update to node''s value')
       
       % Test subthreshold time change
       newt = dt.Node.CurrValue + dur/2;
-      affectedIdxs = submit(testCase.net, dt.Node.Id, newt);
-      changed = applyNodes(testCase.net, affectedIdxs);
+      affectedIdxs = submit(testCase.net.Id, dt.Node.Id, newt);
+      changed = applyNodes(testCase.net.Id, affectedIdxs);
       testCase.verifyFalse(ismember(tr.Node.Id, changed), ...
         'Unexpected update to node''s value')
 
@@ -602,16 +640,16 @@ classdef Signals_test < matlab.unittest.TestCase
       testCase.verifyMatches(s.Name, '\w.keepWhen(\w+\)', 'Unexpected Name')
       
       % Post a truthy value to b
-      affectedIdxs = submit(testCase.net, b.Node.Id, true);
-      changed = applyNodes(testCase.net, affectedIdxs);
+      affectedIdxs = submit(testCase.net.Id, b.Node.Id, true);
+      changed = applyNodes(testCase.net.Id, affectedIdxs);
       % Check only b's node affected
       testCase.verifyTrue(isequal(affectedIdxs, changed, b.Node.Id), ...
         'Unexpected nodes affected when predicate signal true')
       
       % Post a value to signal a
       v = rand;
-      affectedIdxs = submit(testCase.net, a.Node.Id, v);
-      changed = applyNodes(testCase.net, affectedIdxs);
+      affectedIdxs = submit(testCase.net.Id, a.Node.Id, v);
+      changed = applyNodes(testCase.net.Id, affectedIdxs);
       % Check a and s nodes changed
       testCase.verifyTrue(isequal(affectedIdxs, changed, [a.Node.Id;s.Node.Id]), ...
         'Unexpected network behaviour upon posting value to signal a')
@@ -619,16 +657,16 @@ classdef Signals_test < matlab.unittest.TestCase
         'Unexpected values of signals a and s')
       
       % Post a non-truthy value to b
-      affectedIdxs = submit(testCase.net, b.Node.Id, false);
-      changed = applyNodes(testCase.net, affectedIdxs);
+      affectedIdxs = submit(testCase.net.Id, b.Node.Id, false);
+      changed = applyNodes(testCase.net.Id, affectedIdxs);
       % Check only b's node affected
       testCase.verifyTrue(isequal(affectedIdxs, changed, b.Node.Id), ...
         'Unexpected nodes affected when predicate signal false')
       
       % Post a value to signal a
       v = rand;
-      affectedIdxs = submit(testCase.net, a.Node.Id, v);
-      changed = applyNodes(testCase.net, affectedIdxs);
+      affectedIdxs = submit(testCase.net.Id, a.Node.Id, v);
+      changed = applyNodes(testCase.net.Id, affectedIdxs);
       % Check only a's node affected
       testCase.verifyTrue(isequal(affectedIdxs, changed, a.Node.Id), ...
         'Unexpected network behaviour upon posting value to signal a')
@@ -644,15 +682,15 @@ classdef Signals_test < matlab.unittest.TestCase
       
       % Post a value to signal a
       v = rand;
-      affectedIdxs = submit(testCase.net, a.Node.Id, v);
-      changed = applyNodes(testCase.net, affectedIdxs);
+      affectedIdxs = submit(testCase.net.Id, a.Node.Id, v);
+      changed = applyNodes(testCase.net.Id, affectedIdxs);
       % Check only a changed
       testCase.verifyTrue(isequal(affectedIdxs, changed, a.Node.Id), ...
         'Unexpected network behaviour upon posting value to signal a')
             
       % Post a truthy value to b
-      affectedIdxs = submit(testCase.net, b.Node.Id, true);
-      changed = applyNodes(testCase.net, affectedIdxs);
+      affectedIdxs = submit(testCase.net.Id, b.Node.Id, true);
+      changed = applyNodes(testCase.net.Id, affectedIdxs);
       % Check b and s nodes changed
       testCase.verifyTrue(isequal(affectedIdxs, changed, [b.Node.Id;s.Node.Id]), ...
         'Unexpected network behaviour upon posting value to signal b')
@@ -661,8 +699,8 @@ classdef Signals_test < matlab.unittest.TestCase
 
       % Post a value to signal a
       v = rand;
-      affectedIdxs = submit(testCase.net, a.Node.Id, v);
-      changed = applyNodes(testCase.net, affectedIdxs);
+      affectedIdxs = submit(testCase.net.Id, a.Node.Id, v);
+      changed = applyNodes(testCase.net.Id, affectedIdxs);
       % Check only a's node affected: unlike keepwhen, s will not be
       % updated as b (dispite being true) has not changed since last update
       testCase.verifyTrue(isequal(affectedIdxs, changed, a.Node.Id), ...
@@ -671,16 +709,16 @@ classdef Signals_test < matlab.unittest.TestCase
         'Unexpected values of signals a and s')
       
       % Post a non-truthy value to b
-      affectedIdxs = submit(testCase.net, b.Node.Id, false);
-      changed = applyNodes(testCase.net, affectedIdxs);
+      affectedIdxs = submit(testCase.net.Id, b.Node.Id, false);
+      changed = applyNodes(testCase.net.Id, affectedIdxs);
       % Check only b's node affected
       testCase.verifyTrue(isequal(affectedIdxs, changed, b.Node.Id), ...
         'Unexpected nodes affected when predicate signal false')
       
       % Post a value to signal a
       v = rand;
-      affectedIdxs = submit(testCase.net, a.Node.Id, v);
-      changed = applyNodes(testCase.net, affectedIdxs);
+      affectedIdxs = submit(testCase.net.Id, a.Node.Id, v);
+      changed = applyNodes(testCase.net.Id, affectedIdxs);
       % Check only a's node affected
       testCase.verifyTrue(isequal(affectedIdxs, changed, a.Node.Id), ...
         'Unexpected network behaviour upon posting value to signal a')

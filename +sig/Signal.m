@@ -69,8 +69,16 @@ classdef Signal < handle
     
     s = at(this, when)
     
-    % 'ds = what.keepWhen(when)' returns a dependent signal 'ds' which takes
-    % the value of 'what' whenever 'when' evaluates true.
+    % s = filter(this, f[, criterion]) returns a signal whose values pass a
+    % validation function.
+    %
+    % Example:
+    %   filtered = x.filter('> 4');
+    
+    s = filter(this, f, criterion)
+    
+    % f = what.keepWhen(when) returns a dependent signal which takes the
+    % value of 'what' whenever 'when' evaluates true.
     %
     % Example:
     %   ds = s1.keepWhen(s2 > 1); % when s2 > 1, ds == s1
