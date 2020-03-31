@@ -5,8 +5,8 @@ function [val, valset] = buffer(net, inputs, node, ~)
 %
 %   Inputs:
 %     net (int) - id of Signals network to whom input nodes belong
-%     inputs (int) - array of input node ids whose values are to be mapped
-%       through a function
+%     inputs (int) - array of input node ids whose values are 
+%       [newSample, maxSamples]
 %     node (int) - id of node whose value is to be assigned the output
 %
 %   Outputs:

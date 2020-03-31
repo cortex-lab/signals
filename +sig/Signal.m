@@ -81,7 +81,7 @@ classdef Signal < handle
     % value of 'what' whenever 'when' evaluates true.
     %
     % Example:
-    %   ds = s1.keepWhen(s2 > 1); % when s2 > 1, ds == s1
+    %   s = what.keepWhen(x > 1); % when x > 1, s == what
     
     s = keepWhen(what, when)
     

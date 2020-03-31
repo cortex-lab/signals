@@ -95,7 +95,34 @@ classdef Signal < sig.Signal & handle
     end
     
     function f = keepWhen(what, when)
-      f = applyTransferFun(what, when, 'sig.transfer.keepWhen', [], '%s.keepWhen(%s)');
+      % s = keepWhen(what, when) returns a dependent signal which takes the
+      % value of 'what' whenever it updates, provided 'when' evaluates
+      % true.  
+      %
+      % Note: to sample the value of 'what' whenever 'when' updates, use
+      % the at method. 
+      %
+      % Inputs:
+      %   what - a signal whose values to take
+      %   when - a signal that 
+      %
+      % Outputs:
+      %   tr - a signal that updates to true after 'set' and 'release'
+      %     update in that order
+      %
+      % Examples:
+      %   s = what.keepWhen(x > 1); % when x > 1, s == what
+      %   s = what.keepWhen(true); % identity; s === what
+      %
+      % See also SIG.NODE.SIGNAL/FILTER
+      if ischar(when) || isa(when, 'function_handle')
+        f = filter(what, when);
+        f.Node.FormatSpec = ...
+          regexprep(f.Node.FormatSpec, '(?<=^%s\.)filter', 'keepWhen');
+      else
+        f = applyTransferFun(what, when, ...
+          'sig.transfer.keepWhen', [], '%s.keepWhen(%s)');
+      end
     end
     
     function m = map(this, f, formatSpec)

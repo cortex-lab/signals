@@ -5,8 +5,8 @@ function [val, valset] = filter(net, inputs, node, f)
 %
 %   Inputs:
 %     net (int) - id of Signals network to whom input nodes belong
-%     inputs (int) - array of input node ids whose values are to be mapped
-%       through a function
+%     inputs (int) - array of input node ids, the first of which is mapped
+%       through function f
 %     node (int) - id of node whose value is to be assigned the output
 %     f (function_handle) - a function to test whether to keep input value
 %
@@ -18,7 +18,7 @@ function [val, valset] = filter(net, inputs, node, f)
 %   Example:
 %     % Logic for filtering values of node 2 given the output of f matches
 %     % node 3 in network 0.  The filtered value is assigned to node 4: 
-%     val = sig.transfer.buffer(0, [2 3], 4, f)
+%     val = sig.transfer.filter(0, [2 3], 4, f)
 %
 % See also sig.node.Signal/applyTransferFun sig.node.Signal/keepWhen
 
