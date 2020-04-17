@@ -62,7 +62,7 @@ wheelGain = iff(enoughTrials, normalGain, gain);
 
 % Resetting pre-stim quiescent period
 prestimQuiescentPeriod = at(p.prestimQuiescentTime.map(@(A)rnd.sample), events.newTrial); 
-preStimQuiescence = sig.quiescenceWatch(prestimQuiescentPeriod, t, wheel, quiescThreshold); 
+preStimQuiescence = prestimQuiescentPeriod.setEpochTrigger(t, wheel, quiescThreshold); 
 % Stimulus onset
 stimOn = at(true, preStimQuiescence); % FIXME test whether at is needed here
 % Play tone at interactive onset

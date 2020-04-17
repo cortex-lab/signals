@@ -119,6 +119,10 @@ classdef VoidSignal < sig.Signal
       s = this;
     end
     
+    function s = filter(this, f)
+      s = this;
+    end
+    
     function s = end(this, k, n)
       s = this;
     end
