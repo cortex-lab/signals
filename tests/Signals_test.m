@@ -265,6 +265,64 @@ classdef Signals_test < matlab.unittest.TestCase
       testCase.verifyEqual(val, b.Node.WorkingValue, 'Failed to re-evaluate function')
     end
     
+    function test_flatten(testCase)
+      % Tests for flatten method
+      [a, b, c] = deal(testCase.A, testCase.B, testCase.C);
+      flat = a.flatten();
+      
+      % Test return on unset director
+      [val, valset] = sig.transfer.flatten(testCase.net.Id, a.Node.Id, ...
+        flat.Node.Id, struct('unappliedInputChanges', true));
+      testCase.verifyEqual(a.Node.CurrValue, flat.Node.CurrValue, ...
+        'failed to retrieve director value')
+      
+      % Test flatten of signal with regular value
+      val = rand;
+      a.post(val)
+      testCase.verifyEqual(a.Node.CurrValue, flat.Node.CurrValue, ...
+        'failed to retrieve director value')
+      testCase.verifyMatches(flat.Name, '\w+\.flatten()', 'Unexpected Name')
+      
+      % Test flatten of signal with signal as value
+      a.post(b)
+      testCase.verifyEqual(flat.Node.CurrValue, val, 'Unexpected node value')
+      b.post(rand)
+      testCase.verifyEqual(flat.Node.CurrValue, b.Node.CurrValue, ...
+        'failed to retrieve source value')
+      
+      % Test new director value with current value
+      c.post(rand), a.post(c)
+      testCase.verifyEqual(flat.Node.CurrValue, c.Node.CurrValue)
+    end
+    
+    function test_nop(testCase)
+      % Test the NOP transfer function
+      [a, b] = deal(testCase.A, testCase.B);
+      netId = testCase.net.Id;
+      warnId = 'signals:transfer:nopCalled';
+      executable = @() sig.transfer.nop(netId, a.Node.Id, b.Node.Id, []);
+      [val, valset] = testCase.verifyWarning(executable, warnId);
+      testCase.verifyEmpty(val, 'Unexpected value')
+      testCase.verifyFalse(valset, 'Unexpected value set')
+    end
+    
+    function test_identity(testCase)
+      % Test the identity transfer function
+      a = testCase.A;
+      b = a.identity;
+      
+      a.post(rand)
+      testCase.verifyEqual(a.Node.CurrValue, b.Node.CurrValue, ...
+        'Failed to assign value')
+      
+      % Test output when no working value
+      netId = testCase.net.Id;
+      [val, valset] = sig.transfer.identity(netId, a.Node.Id, b.Node.Id, []);
+      testCase.verifyEmpty(val, 'Unexpected value')
+      testCase.verifyFalse(valset, 'Unexpected value set')
+    end
+    
+    
     function test_setEpochTrigger(testCase)
       % Test for setEpochTrigger method 
       [t, dt, x] = deal(testCase.A, testCase.B, testCase.C);

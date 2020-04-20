@@ -1,5 +1,5 @@
 function [val, valset] = keepWhen(net, inputs, ~, ~)
-% SIG.TRANSFER.FILTER Keep signal values when another's value is truthy
+% SIG.TRANSFER.KEEPWHEN Keep signal values when another's value is truthy
 %   Assigns the working value of input if the output of f(input) matches
 %   the criterion. Always assumes input nodes = [what, criterion].
 %

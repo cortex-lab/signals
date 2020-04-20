@@ -1,5 +1,5 @@
 classdef SubscriptableSignal < sig.node.Signal
-  %sig.SubscriptableSignal Dot syntax subscripting to derive new signals
+  % sig.node.SubscriptableSignal Dot syntax subscripting to derive new signals
   %   A sig.SubscriptableSignal can be subscripted to obtain a new
   %   signal whose value results from subscripting the parent's value.
   
@@ -8,6 +8,7 @@ classdef SubscriptableSignal < sig.node.Signal
   end
   
   properties (SetAccess = protected)
+    % When true, multi-level dot syntax subscripts may be performed
     Deep = false
     Subscripts
   end
@@ -51,7 +52,13 @@ classdef SubscriptableSignal < sig.node.Signal
           if a.CacheSubscripts
             a.Subscripts(dotname) = subscript;
           end
-          a = subscript;
+          isDeep = a.Deep; % Make a copy of flag
+          a = subscript; % return subscript signal
+          % If a deep subscripts, make subscriptable
+          if isDeep
+            a = subscriptable(a); 
+            a.Deep = true;
+          end
         end
         if length(s) > 1 % recurse on the rest of the subscripts
           [varargout{1:nargout}] = subsref(a, s(2:end));

@@ -1,16 +1,26 @@
 classdef SubscriptableOriginSignal < sig.node.SubscriptableSignal & ...
     sig.node.OriginSignal
   
-  %UNTITLED Summary of this class goes here
-  %   Detailed explanation goes here
-  
-  properties
-  end
+  % sig.node.SubscriptableOriginSignal Dot syntax assigning of values
+  %   A sig.node.SubscriptableOriginSignal can be updated vis subscripted
+  %   assignment (e.g. S.I = a).  The signal's value is a struct and each
+  %   assignment updates a field of the underlying struct.  Currently
+  %   multi-level subscripted assignment is not implemented.
+  %
+  %   Subscripted referencing is also supported, returning a new signal
+  %   whose value results from subscripting the underlying struct's value.
+  %   For single-level references, the underlying field does not have to
+  %   exist. Multi-level subscripted references can also be made (e.g. s =
+  %   S.a.b.c), although for these, the underlying fields must already
+  %   exist.
+  %
+  % See also sig.node.SubscriptableSignal
   
   methods
     function this = SubscriptableOriginSignal(node, varargin)
       this = this@sig.node.SubscriptableSignal(node, varargin{:});
       this = this@sig.node.OriginSignal(node);
+      this.Deep = true; % Allow 2-level subscripted referencing
     end
     
     function a = subsasgn(a, s, b)

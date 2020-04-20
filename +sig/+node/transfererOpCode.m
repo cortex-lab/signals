@@ -1,6 +1,24 @@
 function code = transfererOpCode(transFun, transArg)
-%UNTITLED2 Summary of this function goes here
-%   Detailed explanation goes here
+%TRANSFEREROPCODE Returns the operation code associated with transfer fun
+%   Returns the transfer op code associated with the input transfer
+%   function and optional transfer argument. This is called by the
+%   sig.node.Node constructor and used when adding new nodes to the
+%   network.  The MEX code uses this code to determine which transfer
+%   function to envoke.
+%
+%   Inputs:
+%     transFun (char) : The transfer function name
+%     transArg (function_handle) : The (optional) transfer argument,
+%       expected to be a function for map and mapn
+%
+%   Output:
+%     code (int) : The associated operation code used in mexnet
+%
+%   Example:
+%     % Get the op code for mapping signal to numel
+%     code = sig.node.transfererOpCode('sig.transfer.map', @numel)
+%
+% See also sig.node.Node, addNode, network/transfer
 
 code = 0; % default op code: means just use matlab transfer function
 

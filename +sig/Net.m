@@ -43,6 +43,16 @@ classdef Net < handle
   
   methods
     function this = Net(size)
+      % SIG.NET Create a new network for managing Signal's nodes
+      %   Initializes a network of a given size in mexnet that will contain
+      %   and manage Signals nodes.
+      %
+      %   Input:
+      %     size (int) : The maximum number of nodes allowing in the
+      %       network.  Default: 4000
+      %
+      % See also sig.node.Signal, sig.node.Node
+
       if nargin < 1
         size = 4000;
       end
@@ -106,28 +116,63 @@ classdef Net < handle
     function s = subscriptableOrigin(this, name)
       % Create a subscriptable origin signal with a specified name
       %  Returns a signal of the class 'SubscriptableOriginSignal', which
-      %  can have its values set via the post method.  This signal can be
-      %  subscripted to obtain a new signal whose value results from
-      %  subscripting the value of the Origin Signal. The name is an
-      %  optional string identifier.
+      %  can have its values set via either subassign or the post method.
+      %  This signal can be subscripted to obtain a new signal whose value
+      %  results from subscripting the value of the Origin Signal. The name
+      %  is an optional string identifier.
       %
-      %  Example:
-      %   net = sig.Net; % Create network
-      %   structSig = net.subscriptableOrigin('structSig');
-      %   post(structSig, struct('a', 1, 'b', 2)) % Post a structure
-      %   s = structSig.a;
-      %   class(s)
-      %   >> ans = 
+      %  NB: To assign values using `post`, using 'dot syntax' will not
+      %  work (see example 2).   
+      %
+      %  Example 1 - Assigning values:
+      %    net = sig.Net; % Create network
+      %    structSig = net.subscriptableOrigin('structSig');
+      %    s = structSig.a;
+      %    class(s)
+      %    >> ans =
       %         'sig.node.Signal'
-      %   s.Node.CurrValue % FIXME: this doesn't work!!
-      %   >> ans = 
-      %         1
+      %    structSig.a = pi; % assign value to field 'a'
+      %    s.Node.CurrValue
+      %    >> ans =
+      %         3.1416
+      %
+      %  Example 2 - Posting structs:
+      %    net = sig.Net; % Create network
+      %    structSig = net.subscriptableOrigin('structSig');
+      %    s = structSig.a; % A signal that updates with the value of 'a'
+      %    post(structSig, struct('a', pi)) % structSig.post(...) will fail
+      %    s.Node.CurrValue
+      %    >> ans =
+      %         3.1416
       %
       % See also sig.Net.OriginSignal, sig.node.SubscriptableOriginSignal
       s = sig.node.SubscriptableOriginSignal(rootNode(this, name));
     end
     
     function s = fromUIEvent(this, uihandle, callback)
+      % Create a Signal from a UI event
+      %  Returns a signal of the class 'SubscriptableOriginSignal', which
+      %  will update with the fields of an event.EventData object thrown by
+      %  the uihandle event.  This signal can be subscripted to obtain the
+      %  property values of the EventData (subscripting returns a Signal).
+      %
+      %  Inputs:
+      %    uihandle (handle) : A handle to a figure, axes or ui element
+      %    callback (char) : The name of the property to set the callback
+      %      function for.  Default: 'Callback'
+      %
+      %  Output:
+      %    s (sig.node.SubscriptableOriginSignal) : A signal which will
+      %      update with the event data each time the UI callback is
+      %      triggered
+      %
+      %  Example:
+      %   net = sig.Net; % Create network
+      %   f = figure;
+      %   keyPresses = net.fromUIEvent(f, 'KeyPressFcn');
+      %   h = output(keyPresses.Key); % print key name to command window
+      %
+      % See also sig.node.onValue
       if nargin < 3
         callback = 'Callback';
       end

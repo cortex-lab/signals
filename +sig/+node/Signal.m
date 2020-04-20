@@ -1,5 +1,6 @@
 classdef Signal < sig.Signal & handle
-  % sig.node.Signal Summary of this class goes here
+  % SIG.NODE.SIGNAL A Signal whose values values are represented by nodes
+  % in a network
   %   Detailed explanation goes here
   
   properties (Dependent)
@@ -343,11 +344,11 @@ classdef Signal < sig.Signal & handle
     end
     
     function tr = setEpochTrigger(period, t, x, threshold)
-      % tr = period.setEpochTrigger(t, x[, threshold]) returns a signal that
-      % is true when another signal doesn't change over some time period.
-      % The signals 'period' and 't' do not necessarily need to represent
-      % time, they are evaluated in a similar way to 'x' and 'threshold'.
-      % The trigger is reset each time 'period' updates.
+      % tr = period.setEpochTrigger(t, x[, threshold]) returns a signal
+      % that is true when another signal doesn't change over some time
+      % period. The signals 'period' and 't' do not necessarily need to
+      % represent time, they are evaluated in a similar way to 'x' and
+      % 'threshold'. The trigger is reset each time 'period' updates.
       %
       % Inputs:
       %   period - a signal containing the period of time over which
@@ -445,6 +446,9 @@ classdef Signal < sig.Signal & handle
     end
     
     function id = identity(this)
+      % ID = S.IDENTITY() Returns a signal that takes the value of its
+      % input whenever it updates.  This is an identity function in that
+      % its output is always the same as its input.
       id = applyTransferFun(this, 'sig.transfer.identity', [], this.Node.FormatSpec);
       % the identity function should display exactly as this one does, i.e.
       % look like it has the same inputs, use the same format spec
@@ -627,16 +631,17 @@ classdef Signal < sig.Signal & handle
       % [tr] = s1.applyTransferFun([s2], ..., funName, funArg, formatSpec)
       % 
       % Inputs:
-      %   `s2`: an input value/signal (there can be multiple as separate 
-      %   args)
-      %   `funName`: a string of the name of the transfer function to be 
-      %   applied 
-      %   `funArg`: an optional function handle which can be applied by the
-      %   transfer function
-      %   `formatSpec`: an optional string which is used to format the name 
-      %   of the output signal
+      %   s2: an input value/signal (there can be multiple as separate 
+      %     args)
+      %   funName: a string of the name of the transfer function to be 
+      %     applied 
+      %   funArg: an optional function handle which can be applied by the
+      %     transfer function
+      %   formatSpec: an optional string which is used to format the name 
+      %     of the output signal
       %
-      % Outputs: `tr`: output signal
+      % Output: 
+      %    tr: output signal
       %
       % Examples: 
       %   tr = s1.applyTransferFun(s2, 'mapn', @plus)

@@ -37,7 +37,7 @@ if isempty(net)
   net.Debug = 'on'; % Turn on debug by default
 end
 
-assert(numel(names) >= nargout, 'Signals:sig:test:create:notEnoughNames', ...
+assert(numel(names) >= nargout, 'signals:sig:test:create:notEnoughNames', ...
   'Number of names provided must be >= nargout')
 
 varargout = cell(1,nargout);
