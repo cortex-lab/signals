@@ -7,11 +7,20 @@ function qevt = quiescenceWatch(newPeriod, t, x, threshold)
 %   signal to monitor. 'threshold' optionally specifies the maximum amount
 %   of change to tolerate before restarting the watch period (if
 %   unspecified it defaults to zero).
+%
+% NB: This function will be removed in the next release, use
+% setEpochTrigger instead.  Note that threshold default is 1 instead of 0,
+% and is initialized to false
+%
+% See also SIG.SCAN.QUIESCENCEWATCH
 
 if nargin < 4
   threshold = 1;
 end
 
+warning('signals:sig:quiescenceWatch:deprecated', ...
+  ['this function will be removed in the next release, '...
+  'please use setEpochTrigger instead'])
 newState = newPeriod.map(@initState);  
 
 state = scan(t.delta(), @tUpdate,... scan time increments

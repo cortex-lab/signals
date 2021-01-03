@@ -1,4 +1,4 @@
-function varargout = create(net, names)
+function varargout = create(varargin)
 % SIG.TEST.CREATE Returns a set of origin signals
 %  [A,B,...N] = SIG.TEST.CREATE([NET, NAMES]) Creates a set of new origin
 %  signals and assigns them to the output arguments.  
@@ -23,14 +23,21 @@ function varargout = create(net, names)
 % 
 % See also sig.test.playgroundPTB
 
+p = inputParser;
+p.addOptional('net',[])
+% If no names provided, use alphabet, i.e. 'a', 'b', etc.
+p.addOptional('names',mapToCell(@char, (1:10) + 96))
+p.parse(varargin{:})
+net = p.Results.net;
+names = p.Results.names;
+
 % Create a network if one is not provided
-if nargin < 1
+if isempty(net)
   net = sig.Net;
   net.Debug = 'on'; % Turn on debug by default
 end
-% If no names provided, use alphabet, i.e. 'a', 'b', etc.
-if nargin < 2, names = mapToCell(@char, (1:5) + 96); end
-assert(numel(names) >= nargout, 'Signals:sig:test:create:notEnoughNames', ...
+
+assert(numel(names) >= nargout, 'signals:sig:test:create:notEnoughNames', ...
   'Number of names provided must be >= nargout')
 
 varargout = cell(1,nargout);

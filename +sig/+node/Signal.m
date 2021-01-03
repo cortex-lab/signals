@@ -1,5 +1,6 @@
 classdef Signal < sig.Signal & handle
-  % sig.node.Signal Summary of this class goes here
+  % SIG.NODE.SIGNAL A Signal whose values values are represented by nodes
+  % in a network
   %   Detailed explanation goes here
   
   properties (Dependent)
@@ -43,8 +44,7 @@ classdef Signal < sig.Signal & handle
     function s = subscriptable(this)
       node = sig.node.Node(this.Node, 'sig.transfer.identity');
       s = sig.node.SubscriptableSignal(node);
-      node.FormatSpec = this.Node.FormatSpec;
-      node.DisplayInputs = this.Node.DisplayInputs;
+      node.FormatSpec = '%s';
       if node.Net.Debug; node.Net.NodeName(node.Id) = this.Name; end
     end
     
@@ -58,8 +58,72 @@ classdef Signal < sig.Signal & handle
       if s.Node.Net.Debug; s.Node.Net.NodeName(s.Node.Id) = s.Name; end
     end
     
+    function s = filter(this, f, criterion)
+      % s = filter(this, f[, criterion]) returns a signal whose values pass
+      % a validation function.  If the function is a char array the
+      % variable may be omitted for brevity, e.g. '~= 2' instead of 'x ~=
+      % 2'.  The values that evaluate to true are kept, unless criterion ==
+      % false, in which case the other values are kept.
+      %
+      % Inputs:
+      %   f (function_handle|char) - a function that returns a logical
+      %     value.
+      %   criterion (logical|sig.Signal) - when true (default) the values 
+      %     that evaluate true are kept.  When false, the values that don't
+      %     pass are kept.
+      %
+      % Outputs:
+      %   tr - a signal that updates to true after 'set' and 'release'
+      %     update in that order
+      %
+      % Examples:
+      %   chrs = x.filter(@ischar);
+      %   positive = x.filter('>0');
+      %   filtered = x.filter(@(x) 5 < x && x < 10);
+      %   outOfRange = x.filter(@(x) 5 < x && x < 10, false);
+      %
+      % See also SIG.NODE.SIGNAL/KEEPWHEN
+      if nargin < 3, criterion = 1; end
+      if ischar(f)
+        f = str2func(['@(x)' iff(f(1) == 'x', f, ['x' f])]);
+      end
+      % Validate the function as best we can
+      assert(nargin(f) > 0, 'function must accept at least one input arg')
+      assert(nargout(f) ~= 0, 'function must return at least one output arg')
+      formatSpec = sprintf('%%s.filter(%s)', toStr(f));
+      s = applyTransferFun(this, criterion, 'sig.transfer.filter', f, formatSpec);
+      s.Node.DisplayInputs = s.Node.Inputs(1); % Don't display criterion
+    end
+    
     function f = keepWhen(what, when)
-      f = applyTransferFun(what, when, 'sig.transfer.keepWhen', [], '%s.keepWhen(%s)');
+      % s = keepWhen(what, when) returns a dependent signal which takes the
+      % value of 'what' whenever it updates, provided 'when' evaluates
+      % true.  
+      %
+      % Note: to sample the value of 'what' whenever 'when' updates, use
+      % the at method. 
+      %
+      % Inputs:
+      %   what - a signal whose values to take
+      %   when - a signal that 
+      %
+      % Outputs:
+      %   tr - a signal that updates to true after 'set' and 'release'
+      %     update in that order
+      %
+      % Examples:
+      %   s = what.keepWhen(x > 1); % when x > 1, s == what
+      %   s = what.keepWhen(true); % identity; s === what
+      %
+      % See also SIG.NODE.SIGNAL/FILTER
+      if ischar(when) || isa(when, 'function_handle')
+        f = filter(what, when);
+        f.Node.FormatSpec = ...
+          regexprep(f.Node.FormatSpec, '(?<=^%s\.)filter', 'keepWhen');
+      else
+        f = applyTransferFun(what, when, ...
+          'sig.transfer.keepWhen', [], '%s.keepWhen(%s)');
+      end
     end
     
     function m = map(this, f, formatSpec)
@@ -119,7 +183,7 @@ classdef Signal < sig.Signal & handle
       % formatting
       funStrs = mapToCell(@toStr, funcs);
       elemStrs = mapToCell(@(e)'%s', elems);
-      formatSpec = ['%s.scan(' strJoin(reshape([elemStrs; funStrs], 1, []), ', ') ')'];
+      formatSpec = ['%s.scan(' strJoin(reshape([funStrs; elemStrs], 1, []), ', ') ')'];
       if ~isempty(pars)
         formatSpec = [formatSpec '[' strJoin(mapToCell(@(e)'%s', pars), ', ') ']'];
       end
@@ -179,67 +243,160 @@ classdef Signal < sig.Signal & handle
     end
     
     function b = bufferUpTo(this, nSamples)
-      
-      % @todo implement as a transfer function
-      b = scan(this, sig.scan.buffering(nSamples), []);
-      b.Node.FormatSpec = sprintf('%%s.bufferUpTo(%i)', nSamples);
+      % b = s.bufferUpTo(n) returns a signal which holds an array of values
+      % of the input signal for the last nSamples. nSamples may be a whole
+      % number or a signal.
+      %
+      % Example:
+      %   latest = s.bufferUpTo(5)
+      formatSpec = '%s.bufferUpTo(%s)';
+      b = applyTransferFun(this, nSamples, 'sig.transfer.buffer', [], formatSpec);
       net = b.Node.Net;
       if net.Debug; net.NodeName(b.Node.Id) = b.Name; end
     end
     
     function b = buffer(this, nSamples)
+      % b = s.buffer(n) returns a signal which holds the last n values
+      % the input signal.  The number of samples to buffer may be a whole
+      % number or a signal.  Unlike bufferUpTo, buffer will not update until
+      % the signal to buffer has updated at least n times.
+      %
+      % Example:
+      %   % Buffer the last 5 values of 's'
+      %   latest = s.buffer(5)
+      %
+      % See also SIG.SIGNAL.BUFFERUPTO
+      
       buffupto = bufferUpTo(this, nSamples);
       nelem = size(buffupto, 2);
       b = buffupto.keepWhen(nelem == nSamples);
-      b.Node.DisplayInputs = this.Node;
-      b.Node.FormatSpec = sprintf('%%s.buffer(%i)', nSamples);
+      b.Node.DisplayInputs = buffupto.Node.DisplayInputs;
+      b.Node.FormatSpec = '%s.buffer(%s)';
       net = b.Node.Net;
       if net.Debug; net.NodeName(b.Node.Id) = b.Name; end
     end
     
-%     function b = bufferUpTo(this, nSamples)
-%       
-%       % Create a scanner that pairs the value with the sample count
-%       value_count = scan(this, fun.restrictScope(@(v,acc){v acc{2}+1}), {[] 0});
-%       % Scan this info to accumulate and slice an array
-%       circ_count = scan(value_count, @circbuff, {[] []});
-%       b = map(circ_count, @recent);
-%       b.Node.DisplayInputs = this.Node;
-%       b.Node.FormatSpec = sprintf('%%s.bufferUpTo(%i)', nSamples);
-%       function circ_cnt = circbuff(val_cnt, circ_cnt)
-%         circ_cnt{2} = val_cnt{2};
-%         if numel(circ_cnt{1}) < nSamples % grow stage
-%           circ_cnt{1} = [circ_cnt{1} val_cnt{1}];
-%         else % slice into next circular position
-%           idx = mod(val_cnt{2} - 1, nSamples) + 1;
-%           circ_cnt{1}(idx) = val_cnt{1};
-%         end
-%       end
-%       function buff = recent(circ_cnt)
-%         if numel(circ_cnt{1}) < nSamples % grow stage
-%           buff = circ_cnt{1};
-%         else
-%           reslice = mod((-nSamples:-1) + circ_cnt{2}, nSamples) + 1;
-%           buff = circ_cnt{1}(reslice);
-%         end
-%       end
-%     end
-
     function m = merge(varargin)
+      % m = merge(s1...sN) returns a signal which takes the value of the
+      % most recent input signal to update. If multiple signals update
+      % during the same transaction, the signal value which occurs earlier
+      % in the input argument list is used.
+      %
+      % Example:
+      %   latest = a.merge(b)
+      %   latest.Name % a ~ b
       formatSpec = ['( ' strJoin(repmat({'%s'}, 1, nargin), ' ~ ') ' )'];      
       m = applyTransferFun(varargin{:}, 'sig.transfer.merge', [], formatSpec);
     end
     
     function p = to(a, b)
+      % p = a.to(b) returns a dependent signal with a logical value. When
+      % 'a' updates with a non-zero value, 'p' updates with true until 'b'
+      % updates with a non-zero value. In this was 'p' is true between
+      % updates of 'a' and 'b'.  Updates to either of these signals
+      % multiple times in a row does not affect the value of 'p'.
+      %
+      % Inputs:
+      %   a - a signal that causes 'p' to update true when it updates
+      %     with a non-zero value 
+      %   b - a signal that causes 'p' to update false when it updates
+      %     with a non-zero value
+      %
+      % Outputs:
+      %   p - a signal that updates to true after 'set' and 'release'
+      %     update in that order
+      %
+      % Example:
+      %   % Signal indicating when stimulus shown
+      %   stimulusOn = onset.to(offset);
+      
       p = applyTransferFun(a, b, 'sig.transfer.latch', [], '%s.to(%s)');
       p.Node.CurrValue = false;
     end
     
     function tr = setTrigger(set, release)
+      % tr = set.setTrigger(release) returns a dependent signal that is
+      % true only when 'release' evaluates true after 'set' updates.  If
+      % release updates a second time after 'set', tr will not update.
+      %
+      % Inputs:
+      %   set - a signal that arms the trigger each time it updates with a
+      %     non-zero value
+      %   release - when this signal updates with a non-zero value after
+      %     'set' updates, 'tr' updates with true
+      %
+      % Outputs:
+      %   tr - a signal that updates to true after 'set' and 'release'
+      %     update in that order
+      %
+      % Example:
+      %   % Signal response made once per closed loop period:
+      %   release = abs(wheelMovement)>=60 | trialTimeout;
+      %   responseMade = closedLoopStart.setTrigger(release);
+      %
+      % See also SIG.NODE.SIGNAL/SETEPOCHTRIGGER
       armed = set.to(release);
       tr = at(true, ~armed); % samples true each time armed goes to false
       tr.Node.FormatSpec = '%s.setTrigger(%s)';
       tr.Node.DisplayInputs = [set.Node release.Node];
+      net = tr.Node.Net;
+      if net.Debug; net.NodeName(tr.Node.Id) = tr.Name; end
+    end
+    
+    function tr = setEpochTrigger(period, t, x, threshold)
+      % tr = period.setEpochTrigger(t, x[, threshold]) returns a signal
+      % that is true when another signal doesn't change over some time
+      % period. The signals 'period' and 't' do not necessarily need to
+      % represent time, they are evaluated in a similar way to 'x' and
+      % 'threshold'. The trigger is reset each time 'period' updates.
+      %
+      % Inputs:
+      %   period - a signal containing the period of time over which
+      %     to check if signal 'x' has had its value changed more than
+      %     the 'threshold'
+      %   t - a signal for time-keeping
+      %   x - a signal that triggers 'tr' when its value doesn't change
+      %     by more than 'threshold' over 'period'
+      %   threshold - an optional numeric value that sets the maximum
+      %     amount 'x' can change by within 'period' to trigger 'tr'.
+      %     Default 0.
+      %
+      % Outputs:
+      %   tr - a signal that is triggered when 'x' changes by less than
+      %     'threshold' over 'period'
+      %
+      % Example:
+      %   % Threshold may be reached only once every interactive phase:
+      %   quiescenceWatchEnd = quiescentDuration.setEpochTrigger(...
+      %     t, wheelPosition, p.preStimQuiescentThreshold);
+      %
+      % See also SIG.NODE.SIGNAL/SETTRIGGER
+
+      % Parse inputs
+      if nargin < 4, threshold = 0; end
+      % Get functions for the scanning signal
+      [initState, tUpdate, xUpdate] = sig.scan.quiescienceWatch;
+      % Each time period updates, return a default state structure
+      newState = period.map(initState);
+      % Update state structure each when t and x signals change
+      state = scan(t.delta(), tUpdate,... scan time increments
+                   x.delta(), xUpdate,... scan x deltas
+                   newState,... initial state on arming trigger
+                   'pars', threshold); % parameters
+      state = state.subscriptable(); % allow field subscripting on state
+      
+      % event signal is derived by monitoring the 'armed' field of state
+      % for new false values (i.e. when the armed trigger is released).
+      armed = subsref(state, substruct('.', 'armed'));
+      % Update to true; update only when trigger released
+      tr = armed.skipRepeats().not().then(true);
+      % Configure the format specification
+      scanNode = state.Node.Inputs;
+      tr.Node.DisplayInputs = [
+        scanNode.DisplayInputs([2,1,4,1]) period.Node];
+      tr.Node.FormatSpec = '%s/%s < %s s.t. %s = %s';
+      % Set armed to false
+      tr.Node.CurrValue = false;
       net = tr.Node.Net;
       if net.Debug; net.NodeName(tr.Node.Id) = tr.Name; end
     end
@@ -289,6 +446,9 @@ classdef Signal < sig.Signal & handle
     end
     
     function id = identity(this)
+      % ID = S.IDENTITY() Returns a signal that takes the value of its
+      % input whenever it updates.  This is an identity function in that
+      % its output is always the same as its input.
       id = applyTransferFun(this, 'sig.transfer.identity', [], this.Node.FormatSpec);
       % the identity function should display exactly as this one does, i.e.
       % look like it has the same inputs, use the same format spec
@@ -450,72 +610,6 @@ classdef Signal < sig.Signal & handle
       end
     end
     
-    function qevt = setEpochTrigger(newPeriod, t, x, threshold)
-      % returns a signal that is triggered (`qevt`) when another signal
-      % (`x`) doesn't change over some time period signified by a third
-      % signal (`newPeriod`)
-      %
-      % Inputs:
-      %   `newPeriod` - a signal containing the period of time over which
-      %   to check if signal `x` has had its value changed more than
-      %   `threshold`
-      %   `t` - a signal for time-keeping
-      %   `x` - a signal that triggers `qevt` when its value doesn't change
-      %   by more than `threshold` over `newPeriod`
-      %   `threshold` - a numeric value that sets the maximum amount `x`
-      %   can change by within `newPeriod` to trigger `qevt`
-      %
-      % Outputs:
-      %   `qevt` - a signal that is triggered when `x` changes by less than
-      %   `threshold` over `newPeriod`
-      
-      if nargin < 4
-        threshold = 0;
-      end
-      
-      newState = newPeriod.map(@initState);
-      
-      state = scan(t.delta(), @tUpdate,... scan time increments
-        x.delta(), @xUpdate,... scan x deltas
-        newState,... initial state on arming trigger
-        'pars', threshold); % parameters
-      state = state.subscriptable(); % allow field subscripting on state
-      
-      % event signal is derived by monitoring the 'armed' field of state
-      % for new false values (i.e. when the armed trigger is released).
-      qevt = state.armed.skipRepeats().not().then(true);
-      %TODO Set nice format spec here?
-      % helper functions
-      
-      function state = initState(dur)
-        % return initial trigger state
-        state = struct('win', dur, 'remaining', dur, 'mvmt', 0, 'armed', true);
-      end
-      
-      function state = tUpdate(state, dt, ~)
-        % update trigger state based on a time increment
-        if state.armed % decrement time remaining until quiescent period met
-          state.remaining = max(state.remaining - dt, 0);
-          if state.remaining == 0 % time's up, trigger can be released
-            state.armed = false; % state is now released
-          end
-        end
-      end
-      
-      function state = xUpdate(state, dx, thresh)
-        % update trigger state based on a delta in the signal that must stay below
-        % threshold
-        if state.armed
-          state.mvmt = state.mvmt + abs(dx); % accumulate the delta
-          if state.mvmt > thresh % reached threshold, so reset
-            state.mvmt = 0;
-            state.remaining = state.win;
-          end
-        end
-      end
-      
-    end
-    
     function n = node(this)
       n = this.Node;
     end
@@ -537,16 +631,17 @@ classdef Signal < sig.Signal & handle
       % [tr] = s1.applyTransferFun([s2], ..., funName, funArg, formatSpec)
       % 
       % Inputs:
-      %   `s2`: an input value/signal (there can be multiple as separate 
-      %   args)
-      %   `funName`: a string of the name of the transfer function to be 
-      %   applied 
-      %   `funArg`: an optional function handle which can be applied by the
-      %   transfer function
-      %   `formatSpec`: an optional string which is used to format the name 
-      %   of the output signal
+      %   s2: an input value/signal (there can be multiple as separate 
+      %     args)
+      %   funName: a string of the name of the transfer function to be 
+      %     applied 
+      %   funArg: an optional function handle which can be applied by the
+      %     transfer function
+      %   formatSpec: an optional string which is used to format the name 
+      %     of the output signal
       %
-      % Outputs: `tr`: output signal
+      % Output: 
+      %    tr: output signal
       %
       % Examples: 
       %   tr = s1.applyTransferFun(s2, 'mapn', @plus)

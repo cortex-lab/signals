@@ -8,21 +8,11 @@ classdef Signal < handle
   %   this is SIG.NODE.SIGNAL.
   %
   %   Example: 
-  %     create a Signals network and three origin signals
   %     net = sig.Net;
-  %     os1 = net.origin('input 1');
-  %     os2 = net.origin('input 2');
-  %     os3 = net.origin('input 3');
+  %     a = net.origin('A');
+  %     b = a^2;
   %
   % See also SIG.NODE.SIGNAL, SIG.NET
-  %
-  % *Note: when running the example code for the below methods, continue
-  % from the 'Running Example' code written above
-  %
-  % @todo edit method descriptions
-  % @body move long method examples/descriptions from here to
-  % tutorials section, then reset examples/descriptions to something
-  % similar Chris' originals
   
   %% Abstract methods
   methods (Abstract)
@@ -79,40 +69,57 @@ classdef Signal < handle
     
     s = at(this, when)
     
-    % 'ds = what.keepWhen(when)' returns a dependent signal 'ds' which takes
-    % the value of 'what' whenever 'when' evaluates true.
+    % s = filter(this, f[, criterion]) returns a signal whose values pass a
+    % validation function.
     %
     % Example:
-    %   ds = s1.keepWhen(s2 > 1); % when s2 > 1, ds == s1
+    %   filtered = x.filter('> 4');
+    
+    s = filter(this, f, criterion)
+    
+    % f = what.keepWhen(when) returns a dependent signal which takes the
+    % value of 'what' whenever 'when' evaluates true.
+    %
+    % Example:
+    %   s = what.keepWhen(x > 1); % when x > 1, s == what
     
     s = keepWhen(what, when)
     
-    % 'ds = s1.to(s2)' returns a dependent signal 'ds' which can only ever
-    % take a value of 1 or 0. 'ds' initially takes a value of 1 when 's1'
-    % takes a truthy value. 'ds' then alternates between updating to '0'
-    % the first time 's2' updates to a truthy value after 's1' has updated
-    % to a truthy value, and updating to '1' the first time 's1' updates
-    % to a truthy value after 's2' has updated to a truthy value.
+    % p = a.to(b) returns a dependent signal with a logical value. When 'a'
+    % updates with a non-zero value, 'p' updates with true until 'b'
+    % updates with a non-zero value. In this was 'p' is true between
+    % updates of 'a' and 'b'.
     %
     % Example:
-    %   ds4 = os1.to(os2);
-    %   ds4Out = output(ds4);
-    %   os1.post(1); % '1' will be displayed
-    %   os1.post(2); % nothing will be displayed
-    %   os2.post(1); % '0' will be displayed
-    %   os1.post(0); % nothing will be displayed
-    %   os1.post(1); % '1' will be displayed
+    %   % Signal indicating when stimulus shown
+    %   stimulusOn = onset.to(offset);
     
     p = to(a, b)
     
-    % 'tr = arm.setTrigger(release)' returns a dependent signal that is true
-    % only when `release` evaluates true after `arm`.
+    % tr = arm.setTrigger(release) returns a dependent signal that is true
+    % only when 'release' evaluates true after 'arm'.
+    %
+    % Example:
+    %   % Signal response made once per closed loop period:
+    %   release = abs(wheelMovement)>=60 | trialTimeout;
+    %   responseMade = closedLoopStart.setTrigger(release);
+    %
+    % See also SIG.SIGNAL/SETEPOCHTRIGGER
+    
+    tr = setTrigger(arm, release)
+    
+    % tr = period.setEpochTrigger(t, x[, threshold]) returns a dependent
+    % signal that is true only when the change in 'x' remains less than
+    % 'threshold' for the duration of 'period'.  
     %
     % Example:
     %   % Threshold may be reached only once every interactive phase:
-    %   threshold = interactiveOn.setTrigger(displacement >= targetAzimuth);
+    %   quiescenceWatchEnd = quiescentDuration.setEpochTrigger(...
+    %     t, wheelPosition, p.preStimQuiescentThreshold);
+    %
+    % See also SIG.SIGNAL/SETTRIGGER
     
-    tr = setTrigger(arm, release)
+    tr = setEpochTrigger(period, t, x, threshold) 
     
     % ds = s.map(f, [formatSpec]) returns a signal which takes the value
     % resulting from mapping function f onto the value in s (i.e. f(s)). If
@@ -196,33 +203,28 @@ classdef Signal < handle
     
     d = delta(this)
     
-    % 'ds = s1.bufferUpTo(n)' returns a dependent signal 'ds' which takes 
-    % as value the last 'n' values 's1' took. When the number of updates
-    % of 's1' is fewer than 'n', 'ds' takes as value all of those updates.
-    % 
-    % Example:
-    %   ds12 = os1.bufferUpTo(3);
-    %   ds12Out = output(ds12);
-    %   os1.post(1); % '1' will be displayed
-    %   os1.post(2); % '[1 2]' will be displayed
-    %   os1.post(3); % '[1 2 3]' will be displayed
-    %   os1.post(4); % '[2 3 4]' will be displayed
+    % b = s.bufferUpTo(n) returns a signal which holds the last n values
+    % the input signal.  The number of samples to buffer may be a whole
+    % number or a signal.
     %
-    % See also SIG.SIGNAL.BUFFER
+    % Example:
+    %   % Buffer the last 5 values of 's'
+    %   latest = s.bufferUpTo(5)
+    %
+    % See also SIG.SIGNAL/BUFFER
     
     b = bufferUpTo(this, nSamples)
     
-    % 'ds = s1.buffer(n)' returns a dependent signal 'ds' which takes as
-    % value the last 'n' values 's1' took. When the number of updates of
-    % 's1' is fewer than 'n', 'ds' takes no value.
+    % b = s.buffer(n) returns a signal which holds the last n values
+    % the input signal.  The number of samples to buffer may be a whole
+    % number or a signal.  Unlike bufferUpTo, buffer will not update until
+    % the signal to buffer has updated at least n times.  
     %
     % Example:
-    %   ds13 = os1.buffer(3);
-    %   ds13Out = output(ds13);
-    %   os1.post(1); % nothing will be displayed
-    %   os1.post(2); % nothing will be displayed
-    %   os1.post(3); % '[1 2 3]' will be displayed
-    %   os1.post(4); % '[2 3 4]' will be displayed
+    %   % Buffer the last 5 values of 's'
+    %   latest = s.buffer(5)
+    %
+    % See also SIG.SIGNAL/BUFFERUPTO
     
     b = buffer(this, nSamples)
     
@@ -237,7 +239,7 @@ classdef Signal < handle
     %   os1.post(2); nothing will be displayed
     %   os1.post(3); '3' will be displayed
     %
-    % See also SIG.SIGNAL.BUFFER, SIG.SIGNAL.DELAY
+    % See also SIG.SIGNAL/BUFFER, SIG.SIGNAL/DELAY
     
     d = lag(this, n)
     
@@ -269,18 +271,13 @@ classdef Signal < handle
     
     l = log(this)
     
-    % 'ds = s1.merge(s2...sN)' returns a dependent signal 'ds' which takes
-    % as value the value of the most recent input signal to update. If 
-    % multiple signals update during the same transaction, 'ds' will update
-    % to the signal which is earlier in the input argument list 
+    % m = merge(s1...sN) returns a signal which takes the value of the most
+    % recent input signal to update. If multiple signals update during the
+    % same transaction, the signal value which occurs earlier in the input
+    % argument list is used.
     %
     % Example:
-    %   ds1 = os1.at(os3);
-    %   ds17 = os1.merge(os2,ds1,os3);
-    %   ds17Out = output(ds17);
-    %   os1.post(1); % '1' will be displayed
-    %   os2.post(2); % '2' will be displayed
-    %   os3.post(3); % '1' will be displayed
+    %   latest = a.merge(b)
     
     m = merge(this, varargin)
     
@@ -506,6 +503,17 @@ classdef Signal < handle
       % New signal carrying character-to-numeric converted array of the
       % input signal
       x = map(strSig, @str2num, 'str2num(%s)');
+    end
+    
+    function x = num2str(numSig, precision)
+      % New signal carrying numeric-to-charecter converted array of the
+      % input signal
+      narginchk(1,2)
+      if nargin == 1
+        x = map(numSig, @num2str, 'num2str(%s)');
+      else
+        x = map2(numSig, precision, @num2str, 'num2str(%s)');
+      end
     end
     
     function b = round(a,N,type)

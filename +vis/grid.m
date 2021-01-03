@@ -5,61 +5,81 @@ function elem = grid(t)
 %  form a grid.
 %
 %  Inputs:
-%    't' - The "time" signal. Used to obtain the Signals network ID.
-%      (Could be any signal within the network - 't' is chosen by
-%      convention).
+%    t - Any signal, used to obtain the Signals network ID.
 %
 %  Outputs:
-%    'elem' - a subscriptable signal containing fields which parametrize
+%    elem - a subscriptable signal containing fields which parametrize
 %      the stimulus, and a field containing the processed texture layer.
-%      Any of the fields except 'azimuths' and 'altitudes' may be a signal.
+%      Any of the fields may be a signal.
 %
-%  Stimulus parameters (fields belonging to 'elem'):
-%    'azimuths' -
-%    'altitudes' -
-%    'thickness' -
-%    'colour' -
-%    'show' -
+%  Stimulus parameters (fields belonging to elem):
+%    azimuths - a vector of azimuths, one for each vertical grid line
+%    altitudes - a vector of altitudes, one for each horizontal grid line
+%    thickness - the line thickness (a scalar value, also in visual degrees)
+%    colour - an array defining the intensity of the red, green and blue
+%      channels respectively. Values must be between 0 and 1.
+%      Default [1 1 1]
+%    show - a logical indicating whether or not the stimulus is visible.
+%      Default false
 %
-% See Also VIS.EMPTYLAYER, VIS.RECTLAYER, VIS.CHECKER6, VIS.PATCH, VIS.GRATING, VIS.IMAGE
-%
-% @todo add to documentation
-% @todo allow fields 'azimuths' and 'azimuths' to take signals as values
+% See Also VIS.EMPTYLAYER, VIS.RECTLAYER, VIS.CHECKER, VIS.PATCH, VIS.IMAGE
 
 elem = t.Node.Net.subscriptableOrigin('grid');
-elem.azimuths = [-180 -90 0 90 180]';
-elem.altitudes = [-90 0 90]';
+elem.azimuths = [-180 -90 0 90 180];
+elem.altitudes = [-90 0 90];
 elem.thickness = 2;
-elem.colour = [102 153 255]'/255;
+elem.colour = [102 153 255]/255;
 elem.show = false;
-elem.layers = elem.map(@makeLayers).flattenStruct();
 
-  function layers = makeLayers(newelem)
-    clear elem t; % eliminate references to unused outer variables
-    % columns
-    colsize = [newelem.thickness 180];
-    for li = 1:numel(newelem.azimuths)
-      pos = [newelem.azimuths(li); 0];
-      [layer, img] = vis.rectLayer(pos, colsize, 0);
-      [layer.rgba, layer.rgbaSize] = vis.rgba(1, 0.5*img);
-      layer.textureId = 'transparentPixel';
-      layer.blending = 'source';
-      layer.maxColour = [newelem.colour(:); 1];
-      layer.show = newelem.show;
-      layers(li) = layer;
-    end
-    % rows
-    rowsize = [360 newelem.thickness];
-    for li = 1:numel(newelem.altitudes)
-      pos = [newelem.azimuths(li); 0];
-      [layer, img] = vis.rectLayer(pos, rowsize, 0);
-      [layer.rgba, layer.rgbaSize] = vis.rgba(1, img);
-      layer.textureId = 'square';
-      layer.blending = 'source';
-      layer.maxColour = [newelem.colour(:); 1];
-      layer.show = newelem.show;
-      layers(end+1) = layer;
-    end
-  end
+azimuths = elem.azimuths.flatten();
+altitudes = elem.altitudes.flatten();
+thickness = elem.thickness.flatten();
+colour = elem.colour.flatten();
+colour = map2(colour(:), 1, @vertcat); % RGBA column vector
 
+templateLayers = thickness.map(@makeTemplates);
+gridLayers = templateLayers.mapn(azimuths, altitudes, @makeLayers);
+elem.layers = gridLayers.mapn(colour, elem.show.flatten, @updateFields);
 end
+
+%% Helper functions
+function templates = makeTemplates(thickness)
+colsize = [thickness 180];
+[columnLayer, img] = vis.rectLayer([], colsize, 0);
+[columnLayer.rgba, columnLayer.rgbaSize] = vis.rgba(1, 0.5*img);
+columnLayer.textureId = 'column';
+columnLayer.blending = 'source';
+
+rowsize = [360 thickness];
+[rowLayer, img] = vis.rectLayer([], rowsize, 0);
+[rowLayer.rgba, rowLayer.rgbaSize] = vis.rgba(1, img);
+rowLayer.textureId = 'row';
+rowLayer.blending = 'source';
+
+templates = [columnLayer rowLayer];
+end
+
+function layers = makeLayers(templates, azimuths, altitudes)
+nCols = numel(azimuths);
+nRows = numel(altitudes);
+
+% columns
+columnLayers = repmat(templates(1), 1, nCols);
+% set positions
+azimuths = mat2cell([azimuths(:), zeros(nCols,1)], ones(1,nCols));
+[columnLayers.texOffset] = deal(azimuths{:});
+
+% rows
+rowLayers = repmat(templates(2), 1, nRows);
+% set positions
+altitudes = mat2cell([zeros(nRows,1), altitudes(:)], ones(1,nRows));
+[rowLayers.texOffset] =  deal(altitudes{:});
+
+layers = [columnLayers rowLayers];
+end
+
+function layers = updateFields(layers, colour, show)
+[layers.maxColour] = deal(colour);
+[layers.show] = deal(show);
+end
+

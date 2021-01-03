@@ -20,7 +20,7 @@ contrastRight = p.stimulusContrast(2);
 % duration of the preStimulusDelay.  The quiescence threshold is a tenth of
 % the rotary encoder resolution.
 preStimulusDelay = p.preStimulusDelay.map(@rnd.sample).at(evts.newTrial); % at(evts.newTrial) fix for rig pre-delay 
-stimulusOn = sig.quiescenceWatch(preStimulusDelay, t, wheel, 10);
+stimulusOn = preStimulusDelay.setEpochTrigger(t, wheel, 10);
 interactiveDelay = p.interactiveDelay.map(@rnd.sample);
 interactiveOn = stimulusOn.delay(interactiveDelay); % the closed-loop period starts when the stimulus comes on, plus an 'interactive delay'
 
@@ -28,7 +28,7 @@ audioDevice = audio.Devices('default');
 onsetToneSamples = p.onsetToneAmplitude*...
     mapn(p.onsetToneFrequency, 0.1, audioDevice.DefaultSampleRate,...
     0.02, audioDevice.NrOutputChannels, @aud.pureTone); % aud.pureTone(freq, duration, samprate, "ramp duration", nAudChannels)
-audio.default = onsetToneSamples.at(interactiveOn); % At the time of 'interative on', send samples to audio device and log as 'onsetTone'
+audio.default = onsetToneSamples.at(interactiveOn); % At the time of 'interative on', send samples to audio device
 
 %% wheel position to stimulus displacement
 % Here we define the multiplication factor for changing the wheel signal

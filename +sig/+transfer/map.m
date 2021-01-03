@@ -13,7 +13,7 @@ if wvset
     msg = sprintf(['Error in Net %i mapping Node %i to %i:\n'...
       'function call ''%s'' with input %s produced an error:\n %s'],...
       net, input, node, func2str(f), toStr(wv,1), ex.message);
-    sigEx = sig.Exception('transfer:mapn:error', msg, net, node, input, wv, f);
+    sigEx = sig.Exception('transfer:map:error', msg, net, node, input, wv, f);
     ex = ex.addCause(sigEx);
     rethrow(ex)
   end

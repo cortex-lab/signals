@@ -27,7 +27,7 @@ perspective = [
  
 % transform to convert xy physical units and fz range to clip space 
 rescale = diag([2/dims(1) 2/dims(2) fzs 1]);
-% final camera -> clip  transform
+% final camera -> clip transform
 P = single(rescale*perspective*Rel*Raz);
 
 end

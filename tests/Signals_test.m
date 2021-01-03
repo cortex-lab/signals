@@ -19,12 +19,136 @@ classdef Signals_test < matlab.unittest.TestCase
       testCase.B = testCase.net.origin('b');
       testCase.C = testCase.net.origin('c');
       
-      testCase.addTeardown(@delete, [testCase.A, testCase.B, testCase.C])
+      testCase.addTeardown(@delete, testCase.A)
+      testCase.addTeardown(@delete, testCase.B)
+      testCase.addTeardown(@delete, testCase.C)
     end
   end
   
   methods (Test)
-    function testMap(testCase)
+    function test_bufferUpTo(testCase)
+      % Test for bufferUpTo method
+      a = testCase.A;
+      b = a.bufferUpTo(3);
+      
+      a.post(randi(1e4))
+      testCase.verifyEqual(b.Node.CurrValue, a.Node.CurrValue, ...
+        'Unexpected output when bufferUpTo')
+      testCase.verifyMatches(b.Name, '\w+\.bufferUpTo\(\d+)', 'Unexpected Name')
+
+      % Test filling buffer
+      vals = rand(1,4);
+      arrayfun(@(v) a.post(v), vals)
+      testCase.verifyEqual(b.Node.CurrValue, vals(end-2:end), ...
+        'Fails to buffer up to sample number')
+      
+      % Test transfer function directly; no new changes in network
+      % ids = pick([b.Node.Inputs], 'Id') % Same as below, requires Rigbox
+      inIds = arrayfun(@(n) n.Id, b.Node.Inputs);
+      args = {testCase.net.Id, inIds, b.Node.Id};
+      [~, valset] = sig.transfer.buffer(args{:});
+      testCase.verifyFalse(valset, 'Expected ''valset'' to be false')
+      
+      % Update one of the input nodes
+      expected = sort(cellfun(@(n) n.Node.Id, {a,b}));
+      actual = submit(testCase.net.Id, a.Node.Id, rand);
+      testCase.verifyEqual(expected(:), actual, ...
+        'Unexpected affected node indicies returned')
+      [val, valset] = sig.transfer.buffer(args{:});
+      testCase.verifyTrue(valset, 'Expected ''valset'' to be true')
+      testCase.verifyEqual(val(end), a.Node.WorkingValue, 'Failed to re-evaluate function')
+      
+      % Test N samples as signal
+      b = testCase.B;
+      buff = a.bufferUpTo(b);
+      testCase.verifyMatches(buff.Name, '\w+\.bufferUpTo\(\w+)', 'Unexpected Name')
+      
+      % No updates until n samples defined
+      a.post(rand)
+      inIds = arrayfun(@(n) n.Id, buff.Node.Inputs);
+      args = {testCase.net.Id, inIds, buff.Node.Id};
+      [~, valset] = sig.transfer.buffer(args{:});
+      testCase.verifyFalse(valset, 'Expected ''valset'' to be false')
+      
+      % Initialize N samples
+      n = 3;
+      b.post(n), arrayfun(@(v) a.post(v), rand(1,n))
+      expected = ...
+        numel(buff.Node.CurrValue) == n && ...
+        buff.Node.CurrValue(end) == a.Node.CurrValue;
+      testCase.verifyTrue(expected, ...
+        'Unexpected output when nSamples is signal')
+      
+      % Test restricting n samples
+      b.post(b.Node.CurrValue-1)
+      [~, valset] = sig.transfer.buffer(args{:});
+      testCase.verifyFalse(valset, 'Expected ''valset'' to be false')
+      a.post(rand)
+      expected = ...
+        numel(buff.Node.CurrValue) == n-1 && ...
+        buff.Node.CurrValue(end) == a.Node.CurrValue;
+      testCase.verifyTrue(expected, ...
+        'Unexpected output when nSamples is signal')
+    end
+    
+    function test_buffer(testCase)
+      % Test for buffer method.  For thorough testing use test_bufferUpTo
+      a = testCase.A;
+      n = 3;
+      b = a.buffer(n);
+      
+      % Test unfilled buffer
+      a.post(rand)
+      testCase.verifyEmpty(b.Node.CurrValue, ...
+        'Expected buffer to be uninitialized while nUpdates < n')
+      testCase.verifyMatches(b.Name, '\w+\.buffer\(\d+)', 'Unexpected Name')
+
+      % Test filling buffer
+      vals = rand(1,n);
+      arrayfun(@(v) a.post(v), vals)
+      testCase.verifyEqual(b.Node.CurrValue, vals(end-2:end), ...
+        'Fails to buffer up to sample number')
+    end
+    
+    function test_filter(testCase)
+      % Tests for filter method
+      [a, b] = deal(testCase.A, testCase.B);
+      f = a.filter(@ischar, b);
+      
+      % Test format specification
+      testCase.verifyMatches(f.Name, '\w+\.filter\(@\w+\)', 'Unexpected Name')
+      
+      b.post(true) % Keep passed
+      [~, set] = currNodeValue(testCase.net.Id, f.Node.Id);
+      testCase.verifyFalse(set, 'Unexpected update')
+      
+      % Test filtering
+      a.post('c')
+      testCase.verifyEqual(f.Node.CurrValue, a.Node.CurrValue, ...
+        'Failed to update with the correct value')
+      a.post(2)
+      testCase.verifyNotEqual(f.Node.CurrValue, a.Node.CurrValue, ...
+        'Failed to discard value')
+      
+      b.post(false) % Keep failed
+      a.post(2)
+      testCase.verifyEqual(f.Node.CurrValue, a.Node.CurrValue, ...
+        'Failed to update with the correct value')
+      a.post('c')
+      testCase.verifyNotEqual(f.Node.CurrValue, a.Node.CurrValue, ...
+        'Failed to discard value')
+      
+      % Test functions are char
+      f = a.filter('~=2');
+      a.post(0)
+      testCase.verifyEqual(f.Node.CurrValue, a.Node.CurrValue, ...
+        'Failed to discard value')
+      a.post(2)
+      testCase.verifyNotEqual(f.Node.CurrValue, a.Node.CurrValue, ...
+        'Failed to update with the correct value')
+    end
+      
+    function test_map(testCase)
       % Tests for map method
       [a, c] = deal(testCase.A, testCase.C);
       
@@ -48,7 +172,7 @@ classdef Signals_test < matlab.unittest.TestCase
       % No new changes in network;
       args = {testCase.net.Id, a.Node.Id, [], @identity};
       [~, valset] = sig.transfer.map(args{:});
-      testCase.verifyTrue(~valset, 'Expected ''valset'' to be false')
+      testCase.verifyFalse(valset, 'Expected ''valset'' to be false')
       % Update one of the input nodes
       actual = submit(testCase.net.Id, a.Node.Id, v);
       testCase.verifyEqual(sort([a.Node.Id; b.Node.Id]), actual, ...
@@ -68,7 +192,7 @@ classdef Signals_test < matlab.unittest.TestCase
       testCase.verifyMatches(b.Name, '\w+\.map\(\w+\)', 'Unexpected Name')
     end
     
-    function testMapn(testCase)
+    function test_mapn(testCase)
       % Tests for mapn method
       [a, b] = deal(testCase.A, testCase.B);
       
@@ -102,7 +226,7 @@ classdef Signals_test < matlab.unittest.TestCase
       % No new changes in network;
       args = {testCase.net.Id, [a.Node.Id, b.Node.Id], [], {@meshgrid, 1}};
       [~, valset] = sig.transfer.mapn(args{:});
-      testCase.verifyTrue(~valset, 'Expected ''valset'' to be false')
+      testCase.verifyFalse(valset, 'Expected ''valset'' to be false')
       % Update one of the input nodes
       actual = submit(testCase.net.Id, a.Node.Id, xx);
       testCase.verifyEqual(sort([a.Node.Id; X.Node.Id; Y.Node.Id]), actual, ...
@@ -110,6 +234,134 @@ classdef Signals_test < matlab.unittest.TestCase
       [val, valset] = sig.transfer.mapn(args{:});
       testCase.verifyTrue(valset, 'Expected ''valset'' to be true')
       testCase.verifyEqual(val, expectedX, 'Failed to re-evaluate function')
+    end
+    
+    function test_merge(testCase)
+      % Tests for map method
+      [a, b, c] = deal(testCase.A, testCase.B, testCase.C);
+      
+      % Test merge
+      m = merge(a, b, c);
+      testCase.verifyMatches(m.Name, '( \w ~ \w ~ \w )', 'Unexpected Name')
+      for s = {c, b, a, b}
+        v = rand;
+        post(s{1}, v)
+        testCase.verifyEqual(m.Node.CurrValue, v, 'Unexpected output using merge')
+      end
+      
+      % Test transfer function directly
+      % No new changes in network;
+      ids = @(varargin) cellfun(@(s) s.Node.Id, varargin);
+      args = {testCase.net.Id, ids(a, b, c), m.Node.Id};
+      [~, valset] = sig.transfer.merge(args{:});
+      testCase.verifyFalse(valset, 'Expected ''valset'' to be false')
+      % Update one of the input nodes
+      expected = sort(ids(m, b));
+      actual = submit(testCase.net.Id, b.Node.Id, rand);
+      testCase.verifyEqual(expected(:), actual, ...
+        'Unexpected affected node indicies returned')
+      [val, valset] = sig.transfer.merge(args{:});
+      testCase.verifyTrue(valset, 'Expected ''valset'' to be true')
+      testCase.verifyEqual(val, b.Node.WorkingValue, 'Failed to re-evaluate function')
+    end
+    
+    function test_flatten(testCase)
+      % Tests for flatten method
+      [a, b, c] = deal(testCase.A, testCase.B, testCase.C);
+      flat = a.flatten();
+      
+      % Test return on unset director
+      [val, valset] = sig.transfer.flatten(testCase.net.Id, a.Node.Id, ...
+        flat.Node.Id, struct('unappliedInputChanges', true));
+      testCase.verifyEqual(a.Node.CurrValue, flat.Node.CurrValue, ...
+        'failed to retrieve director value')
+      
+      % Test flatten of signal with regular value
+      val = rand;
+      a.post(val)
+      testCase.verifyEqual(a.Node.CurrValue, flat.Node.CurrValue, ...
+        'failed to retrieve director value')
+      testCase.verifyMatches(flat.Name, '\w+\.flatten()', 'Unexpected Name')
+      
+      % Test flatten of signal with signal as value
+      a.post(b)
+      testCase.verifyEqual(flat.Node.CurrValue, val, 'Unexpected node value')
+      b.post(rand)
+      testCase.verifyEqual(flat.Node.CurrValue, b.Node.CurrValue, ...
+        'failed to retrieve source value')
+      
+      % Test new director value with current value
+      c.post(rand), a.post(c)
+      testCase.verifyEqual(flat.Node.CurrValue, c.Node.CurrValue)
+    end
+    
+    function test_nop(testCase)
+      % Test the NOP transfer function
+      [a, b] = deal(testCase.A, testCase.B);
+      netId = testCase.net.Id;
+      warnId = 'signals:transfer:nopCalled';
+      executable = @() sig.transfer.nop(netId, a.Node.Id, b.Node.Id, []);
+      [val, valset] = testCase.verifyWarning(executable, warnId);
+      testCase.verifyEmpty(val, 'Unexpected value')
+      testCase.verifyFalse(valset, 'Unexpected value set')
+    end
+    
+    function test_identity(testCase)
+      % Test the identity transfer function
+      a = testCase.A;
+      b = a.identity;
+      
+      a.post(rand)
+      testCase.verifyEqual(a.Node.CurrValue, b.Node.CurrValue, ...
+        'Failed to assign value')
+      
+      % Test output when no working value
+      netId = testCase.net.Id;
+      [val, valset] = sig.transfer.identity(netId, a.Node.Id, b.Node.Id, []);
+      testCase.verifyEmpty(val, 'Unexpected value')
+      testCase.verifyFalse(valset, 'Unexpected value set')
+    end
+    
+    
+    function test_setEpochTrigger(testCase)
+      % Test for setEpochTrigger method 
+      [t, dt, x] = deal(testCase.A, testCase.B, testCase.C);
+      t.Name = 'duration'; dt.Name = 't'; x.Name = 'x';
+      tr = setEpochTrigger(t, dt, x);
+      
+      % Verify name
+      str = sprintf('%1$s\\w/%1$s\\w < \\w s.t. %1$s\\w = \\w', char(916));
+      testCase.verifyMatches(tr.Name, str, 'Unexpected Name')
+      
+      % Verify initialized to false
+      testCase.verifyFalse(tr.Node.CurrValue, 'Expected ''valset'' to be false')
+      
+      % Test trigger release
+      dur = 5;
+      t.post(dur)
+      x.post(.1), x.post(.2)
+      dt.post(0), dt.post(dur + 1)
+      testCase.verifyTrue(tr.Node.CurrValue, 'Failed to release trigger')
+      
+      % Test period reset
+      affectedIdxs = submit(testCase.net.Id, t.Node.Id, dur);
+      changed = applyNodes(testCase.net.Id, affectedIdxs);
+      testCase.verifyFalse(ismember(tr.Node.Id, changed), ...
+        'Unexpected update to node''s value')
+      
+      % Test subthreshold time change
+      newt = dt.Node.CurrValue + dur/2;
+      affectedIdxs = submit(testCase.net.Id, dt.Node.Id, newt);
+      changed = applyNodes(testCase.net.Id, affectedIdxs);
+      testCase.verifyFalse(ismember(tr.Node.Id, changed), ...
+        'Unexpected update to node''s value')
+
+      % Test position reset
+      state = tr.Node.Inputs(2).Inputs(1).Inputs(1).Inputs(1);
+      newx = x.Node.CurrValue^2;
+      x.post(newx);
+      testCase.verifyEqual(state.CurrValue.remaining, dur, ...
+        'Failed to reset period')
     end
     
     function test_size(testCase)
@@ -146,8 +398,10 @@ classdef Signals_test < matlab.unittest.TestCase
       
       % 2 inputs, 2 outputs
       [~, sz] = size(a, 2);  %#ok<*ASGLU>
-      testCase.verifyError(@()a.post(1:n), 'MATLAB:maxlhs', ...
-        'Unexpected error identifier')
+      % Note in 2019b error id changed
+      id = iff(verLessThan('matlab', '9.7'), ...
+          'MATLAB:maxlhs', 'MATLAB:size:NumOutNotEqualNumDims');
+      testCase.verifyError(@()a.post(1:n), id, 'Unexpected error identifier')
     end
     
     function test_output(testCase)
@@ -280,7 +534,31 @@ classdef Signals_test < matlab.unittest.TestCase
       a.post(x)
       testCase.verifyEqual(b.Node.CurrValue, e)
     end
-    
+
+    function test_str2num(testCase)
+      % Test for the str2num method
+      a = testCase.A;
+      b = a.str2num; % our method to test
+      str = '234.54'; % string to test
+
+      testCase.verifyMatches(b.Name, 'str2num\(\w+\)', 'Unexpected Name')
+      a.post(str)
+      testCase.verifyEqual(b.Node.CurrValue, str2double(str))
+    end
+
+    function test_num2str(testCase)
+      % Test for the num2str method
+      a = testCase.A;
+      b = num2str(a); % our method to test
+      b_pres = num2str(a, 3);
+      n = rand; % number to convert
+
+      testCase.verifyMatches(b.Name, 'num2str\(\w+\)', 'Unexpected Name')
+      a.post(n)
+      testCase.verifyEqual(b.Node.CurrValue, num2str(n))
+      testCase.verifyEqual(b_pres.Node.CurrValue, num2str(n, 3))
+    end
+
     function test_fliplr(testCase)
       % Test for the fliplr method
       a = testCase.A;
@@ -420,16 +698,16 @@ classdef Signals_test < matlab.unittest.TestCase
       testCase.verifyMatches(s.Name, '\w.keepWhen(\w+\)', 'Unexpected Name')
       
       % Post a truthy value to b
-      affectedIdxs = submit(testCase.net, b.Node.Id, true);
-      changed = applyNodes(testCase.net, affectedIdxs);
+      affectedIdxs = submit(testCase.net.Id, b.Node.Id, true);
+      changed = applyNodes(testCase.net.Id, affectedIdxs);
       % Check only b's node affected
       testCase.verifyTrue(isequal(affectedIdxs, changed, b.Node.Id), ...
         'Unexpected nodes affected when predicate signal true')
       
       % Post a value to signal a
       v = rand;
-      affectedIdxs = submit(testCase.net, a.Node.Id, v);
-      changed = applyNodes(testCase.net, affectedIdxs);
+      affectedIdxs = submit(testCase.net.Id, a.Node.Id, v);
+      changed = applyNodes(testCase.net.Id, affectedIdxs);
       % Check a and s nodes changed
       testCase.verifyTrue(isequal(affectedIdxs, changed, [a.Node.Id;s.Node.Id]), ...
         'Unexpected network behaviour upon posting value to signal a')
@@ -437,16 +715,68 @@ classdef Signals_test < matlab.unittest.TestCase
         'Unexpected values of signals a and s')
       
       % Post a non-truthy value to b
-      affectedIdxs = submit(testCase.net, b.Node.Id, false);
-      changed = applyNodes(testCase.net, affectedIdxs);
+      affectedIdxs = submit(testCase.net.Id, b.Node.Id, false);
+      changed = applyNodes(testCase.net.Id, affectedIdxs);
       % Check only b's node affected
       testCase.verifyTrue(isequal(affectedIdxs, changed, b.Node.Id), ...
         'Unexpected nodes affected when predicate signal false')
       
       % Post a value to signal a
       v = rand;
-      affectedIdxs = submit(testCase.net, a.Node.Id, v);
-      changed = applyNodes(testCase.net, affectedIdxs);
+      affectedIdxs = submit(testCase.net.Id, a.Node.Id, v);
+      changed = applyNodes(testCase.net.Id, affectedIdxs);
+      % Check only a's node affected
+      testCase.verifyTrue(isequal(affectedIdxs, changed, a.Node.Id), ...
+        'Unexpected network behaviour upon posting value to signal a')
+      testCase.verifyTrue(v == a.Node.CurrValue && s.Node.CurrValue ~= v, ...
+        'Unexpected values of signals a and s')
+    end
+    
+    function test_at(testCase)
+      % Test for the at method
+      [a, b] = deal(testCase.A, testCase.B);
+      s = a.at(b);
+      testCase.verifyMatches(s.Name, '\w.at(\w+\)', 'Unexpected Name')
+      
+      % Post a value to signal a
+      v = rand;
+      affectedIdxs = submit(testCase.net.Id, a.Node.Id, v);
+      changed = applyNodes(testCase.net.Id, affectedIdxs);
+      % Check only a changed
+      testCase.verifyTrue(isequal(affectedIdxs, changed, a.Node.Id), ...
+        'Unexpected network behaviour upon posting value to signal a')
+            
+      % Post a truthy value to b
+      affectedIdxs = submit(testCase.net.Id, b.Node.Id, true);
+      changed = applyNodes(testCase.net.Id, affectedIdxs);
+      % Check b and s nodes changed
+      testCase.verifyTrue(isequal(affectedIdxs, changed, [b.Node.Id;s.Node.Id]), ...
+        'Unexpected network behaviour upon posting value to signal b')
+      testCase.verifyTrue(isequal(v, a.Node.CurrValue, s.Node.CurrValue), ...
+        'Unexpected values of signals a and s')
+
+      % Post a value to signal a
+      v = rand;
+      affectedIdxs = submit(testCase.net.Id, a.Node.Id, v);
+      changed = applyNodes(testCase.net.Id, affectedIdxs);
+      % Check only a's node affected: unlike keepwhen, s will not be
+      % updated as b (dispite being true) has not changed since last update
+      testCase.verifyTrue(isequal(affectedIdxs, changed, a.Node.Id), ...
+        'Unexpected network behaviour upon posting value to signal a')
+      testCase.verifyTrue(v == a.Node.CurrValue && s.Node.CurrValue ~= v, ...
+        'Unexpected values of signals a and s')
+      
+      % Post a non-truthy value to b
+      affectedIdxs = submit(testCase.net.Id, b.Node.Id, false);
+      changed = applyNodes(testCase.net.Id, affectedIdxs);
+      % Check only b's node affected
+      testCase.verifyTrue(isequal(affectedIdxs, changed, b.Node.Id), ...
+        'Unexpected nodes affected when predicate signal false')
+      
+      % Post a value to signal a
+      v = rand;
+      affectedIdxs = submit(testCase.net.Id, a.Node.Id, v);
+      changed = applyNodes(testCase.net.Id, affectedIdxs);
       % Check only a's node affected
       testCase.verifyTrue(isequal(affectedIdxs, changed, a.Node.Id), ...
         'Unexpected network behaviour upon posting value to signal a')

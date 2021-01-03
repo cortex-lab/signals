@@ -4,30 +4,28 @@ function elem = patch(t, shape)
 %  shape.
 %
 %  Inputs:
-%    't' - The "time" signal. Used to obtain the Signals network ID.
-%      (Could be any signal within the network - 't' is chosen by
-%      convention).
-%    'shape' - char array defining what shape to show. Options are 
+%    t - Any signal; used to obtain the Signals network ID.
+%    shape - char array defining what shape to show. Options are 
 %     'rectangle' (default), 'circle' and 'cross'.
 %    
 %  Outputs:
-%    'elem' - a subscriptable signal containing fields which parametrize
+%    elem - a subscriptable signal containing fields which parametrize
 %      the stimulus, and a field containing the processed texture layer. 
-%      Currently, any of the fields but 'dims' for 'circle' may be a signal.
+%      Any of the fields may be a signal.
 % 
-%  Stimulus parameters (fields belonging to 'elem'):
-%    'azimuth' - the azimuth of the image (position of the centre pixel in 
+%  Stimulus parameters (fields belonging to elem):
+%    azimuth - the azimuth of the image (position of the centre pixel in 
 %     visual degrees).  Default 0
-%    'altitude' - the altitude of the image (position of the centre pixel 
+%    altitude - the altitude of the image (position of the centre pixel 
 %     in visual degrees). Default 0
-%    'dims' - the dimensions of the shape in visual degrees. May be an
+%    dims - the dimensions of the shape in visual degrees. May be an
 %      array of the form [width height] or a scalar if these dimensions are
 %      equal. Default [10 10]
-%    'orientation' - the orientation of the shape in degrees. Default 0
-%    'colour' - an array defining the intensity of the red, green and blue
+%    orientation - the orientation of the shape in degrees. Default 0
+%    colour - an array defining the intensity of the red, green and blue
 %      channels respectively. Values must be between 0 and 1. 
 %      Default [1 1 1]
-%    'show' - a logical indicating whether or not the stimulus is visible.
+%    show - a logical indicating whether or not the stimulus is visible.
 %      Default false
 %
 %  See Also VIS.EMPTYLAYER, VIS.GRATING, VIS.CHECKER6, VIS.GRID, VIS.IMAGE
@@ -54,7 +52,10 @@ elem.show = false;
 % 'flattenStruct' returns the same texture layer but with all fields
 % containing signals replaced by their current value. The 'layers' field
 % is loaded by VIS.DRAW
-elem.layers = elem.map(@makeLayer).flattenStruct();
+flatten = @(A)A(:);
+isInitialized = @(l)~any(flatten(cellfun('isempty', struct2cell(l))));
+layers = elem.map(@makeLayer).flattenStruct();
+elem.layers = layers.keepWhen(layers.map(isInitialized));
 
   function layer = makeLayer(newelem)
     clear elem t; % eliminate references to unused outer variables

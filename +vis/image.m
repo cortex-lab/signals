@@ -4,39 +4,31 @@ function elem = image(t, sourceImage, alpha)
 %  image.
 %
 %  Inputs:
-%    't' - The "time" signal. Used to obtain the Signals network ID.
-%      (Could be any signal within the network - 't' is chosen by
-%      convention).
-%    'sourceImage' - Either a standard image file, or path to a '.mat' file
-%      containing an image represented as a numeric array, or a signal 
-%      whose value is an image represtented as a numeric array.
-%    'alpha' - the alpha value(s) for the image (optional).  Can be a
-%      single value or array the size of 'sourceImage.'  If no alpha value
-%      is provided and sourceImage is a char the image will be opaque.
-%      This input overrides the source image's values if it has any.
-%
+%    t - Any signal, used to obtain the Signals network ID.
+%    
 %  Outputs:
-%    'elem' - a subscriptable signal containing fields which parametrize
+%    elem - a subscriptable signal containing fields which parametrize
 %      the stimulus, and a field containing the processed texture layer. 
 %      Any of the fields may be a signal.
 %
 %  Stimulus parameters:
-%    'sourceImage' - see above
-%    'window' - If 'gaussian' or 'gauss', a Gaussian window is applied over
+%    sourceImage - see above
+%    alpha - see above
+%    window - If 'gaussian' or 'gauss', a Gaussian window is applied over
 %      the image.  Default is 'none'.
-%    'sigma' - the size of the gaussian window in visual degrees [w h].
+%    sigma - the size of the gaussian window in visual degrees [w h].
 %      Default [5 5].
-%    'azimuth' - the azimuth of the image (position of the centre pixel in 
+%    azimuth - the azimuth of the image (position of the centre pixel in 
 %      visual degrees).  Default 0
-%    'altitude' - the altitude of the image (position of the centre pixel 
+%    altitude - the altitude of the image (position of the centre pixel 
 %      in visual degrees). Default 0
-%    'dims' - the dimensions of the shape in visual degrees. May be an
+%    dims - the dimensions of the shape in visual degrees. May be an
 %      array of the form [width height] or a scalar if these dimensions are
 %      equal. Default [10 10]
-%    'orientation' - the orientation of the image in degrees. Default 0
-%    'repeat' - a logical indicating whether or not to repeat the image
+%    orientation - the orientation of the image in degrees. Default 0
+%    repeat - a logical indicating whether or not to repeat the image
 %      over the entire visual field. Default false
-%    'show' - a logical indicating whether or not the stimulus is visible.
+%    show - a logical indicating whether or not the stimulus is visible.
 %      Default false
 %
 %  NB: If loading multiple visual elements with different image paths,
@@ -137,10 +129,13 @@ elem.Name = name;
           error('window:error', 'Invalid window type ''%s''', newelem.window);
       end
       [winLayer.rgba, winLayer.rgbaSize] = vis.rgba(0, winImg);
+      imgLayer.blending = 'destination';
       winLayer.blending = 'none';
+      winLayer.texAngle = newelem.orientation;
       winLayer.colourMask = [false false false true];
       winLayer.show = newelem.show;
     else % no window
+      imgLayer.blending = 'source';
       winLayer = [];
     end
     layers = [winLayer, imgLayer];

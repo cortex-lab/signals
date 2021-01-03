@@ -18,7 +18,7 @@ function [layer, img] = rectLayer(pos, dims, orientation)
 
 %% Square
 % Create a 3x3 matrix with the centre pixle set to 1.  This single square
-% pixel can be transformed to create a rectangle of any dimentions.
+% pixel can be transformed to create a rectangle of any dimensions.
 img = zeros(3, 3, 'single');
 img(2,2) = 1;
 

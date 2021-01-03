@@ -40,7 +40,7 @@ function s = toStr(v, inline)
 
 if nargin > 1 && inline == true && ~isstruct(v) && ~isscalar(v)
   % Format the string to fit on a single line
-  if ~isvector(v) || numel(v) > 5
+  if ~isvector(v) || numel(v) > 5 || isa(v, 'containers.Map')
     s = sprintf('%ix%i %s', size(v,1), size(v,2), class(v));
   else % process small row and column vectors
     if iscolumn(v)
