@@ -1,6 +1,8 @@
 function [x, y, z, u, v, tridx] = uniSphereTriangles(r, n)
-%UNTITLED Summary of this function goes here
-%   Detailed explanation goes here
+%vis.uniSphereTriangles UV sphere mapping
+%   Returns the UV sphere mesh coordinates (x,y,z), the UV texture map
+%   (u,v) and the indices of each triangle on the sphere.  The sphere is a
+%   unit sphere
 
 % [el, az] = ndgrid(...
 %   linspace(-pi/2, pi/2, nRings+1),...
@@ -29,7 +31,7 @@ tri1offsets = [0, 0; 1 1; 0 1]; %NE triangle of square
 tri2offsets = [0, 0; 1 0; 1 1]; %SW triangle of square
 
 % tridx = [indices(tri1offsets)];
-nTris = 2*numel(x);
+nTris = 2*numel(x); % two triangles per sector
 tridx = zeros(3, nTris);
 tridx(:,1:2:nTris) = indices(tri1offsets);
 tridx(:,2:2:nTris) = indices(tri2offsets);

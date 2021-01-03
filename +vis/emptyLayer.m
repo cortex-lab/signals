@@ -45,8 +45,8 @@ layer.isPeriodic = true;
 %  '1-source' (/'1-src')
 layer.blending = 'source';
 % MINCOLOUR & MAXCOLOUR arrays of the form [R G B A] indicating the min
-% (max) intensity of the red, green and blue channels, along with the amout
-% of opacity (alpha).  Values must be between 0 and 1.
+% (max) intensity of the red, green and blue channels, along with the
+% amount of opacity (alpha).  Values must be between 0 and 1.
 layer.minColour = [0 0 0 0]';
 layer.maxColour = [1 1 1 1]';
 % COLOURMASK logical array indicating whether the red, green, blue and
