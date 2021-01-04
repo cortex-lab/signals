@@ -1,6 +1,10 @@
 # Changelog
 
-## [Latest](https://github.com/cortex-lab/signals/commits/master) [1.3.0]
+## [Latest](https://github.com/cortex-lab/signals/commits/master) [1.3.1]
+
+- HOTFIX: Duplicate test name in Signals_test; added test for `then` method
+
+## [1.3.0]
 
 - vis.checker6 is renamed to vis.checker, all others have been removed
 - A new filter method was added that filters its input signal's values using a function handle
