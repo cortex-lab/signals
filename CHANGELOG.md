@@ -1,6 +1,10 @@
 # Changelog
 
-## [Latest](https://github.com/cortex-lab/signals/commits/master) [1.3.1]
+## [Latest](https://github.com/cortex-lab/signals/commits/master) [1.3.2]
+
+- HOTFIX: A typo causing tests to fail
+
+## [1.3.1]
 
 - HOTFIX: Duplicate test name in Signals_test; added test for `then` method
 
