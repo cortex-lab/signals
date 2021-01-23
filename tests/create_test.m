@@ -22,8 +22,8 @@ assert(strcmp(names, '123'), 'Unexpected names');
 
 % Test names error
 try
-[a, b, c] = sig.test.create(net, {'1'});
-ex.identifier = '';
+  [a, b, c] = sig.test.create(net, {'1'});
+  ex.identifier = '';
 catch ex
 end
-assert(strcmp(ex.identifier, 'Signals:sig:test:create:notEnoughNames'))
+assert(strcmpi(ex.identifier, 'signals:sig:test:create:notEnoughNames'))
