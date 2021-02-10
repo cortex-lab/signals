@@ -749,7 +749,6 @@ classdef Signals_test < matlab.unittest.TestCase
       
       testCase.at_then_test(s)
     end
-    
   end
   
   methods (Access = private)
