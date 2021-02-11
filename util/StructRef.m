@@ -15,16 +15,23 @@ classdef StructRef < handle
   
   methods (Sealed)
     function A = subsasgn(this, s, varargin)
-      newentry = false;
-      if strcmp(s(1).type, '.') && ~any(strcmp(this.EntryNames, s(1).subs))
-        newentry = true;
-        newentryname = s(1).subs;
-      end
-      this.Entries = builtin('subsasgn', this.Entries, s, varargin{:});
-      A = this;
-      if newentry
-        this.EntryNames = [this.EntryNames {newentryname}];
-        this.Entries.(newentryname) = entryAdded(this, newentryname, this.Entries.(newentryname));
+      if any(strcmp(this.Reserved, s(1).subs))
+        % If subscripted reference is a reserved property, use builtin
+        A = builtin('subsasgn', this, s, varargin{:});
+      else
+        % Otherwise assign to Entries property
+        newentry = false;
+        if strcmp(s(1).type, '.') && ~any(strcmp(this.EntryNames, s(1).subs))
+          newentry = true;
+          newentryname = s(1).subs;
+        end
+        this.Entries = builtin('subsasgn', this.Entries, s, varargin{:});
+        A = this;
+        if newentry
+          this.EntryNames = [this.EntryNames {newentryname}];
+          % Reassign with the subclassed method
+          this.Entries.(newentryname) = entryAdded(this, newentryname, this.Entries.(newentryname));
+        end
       end
     end
     

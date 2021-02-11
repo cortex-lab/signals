@@ -12,7 +12,7 @@ classdef Registry < StructRef
   %
   % See also AUDSTREAM.REGISTRY, STRUCTREF
   
-  properties
+  properties (SetAccess = protected)
     EntryLogs
     ClockFun
   end
@@ -27,9 +27,21 @@ classdef Registry < StructRef
     end
 
     function value = entryAdded(this, name, value)
+      % ENTRYADDED Log new entry
+      %   This method is called once when a new field is added via
+      %   subscripted assignment and creates a logging signal.  This is
+      %   called by the StructRef subsasgn method.
+      %
+      %   Inputs:
+      %     name (char) - The name of the newly assigned field
+      %     value (sig.Signal) - The Signal assigned to the field
+      %
+      % See also STRUCTREF/SUBSASGN
+      
       % all event entries should be signals, so let's turn them into
       % logging signals
-      assert(isa(value, 'sig.Signal'));
+      id = 'signals:sig:Registry:typeError';
+      assert(isa(value, 'sig.Signal'), id, 'must assign Signals only');
 %       fprintf('Signal %s registered\n', name);
       this.EntryLogs.(name) = value.log(this.ClockFun);
     end
@@ -38,16 +50,17 @@ classdef Registry < StructRef
       % Returns a structure of logged signal values and times
       %  If a clockOffset is provided, all timestampes are returned with
       %  respect to that reference time.
+      %
+      %  Input:
+      %    clockOffset (float) - A reference timestamp.  All log times
+      %     will be returned relative to this.  Default: 0.
+      %
       %  Example:
-      %    net = sig.Net; % Create our network
-      %    t0 = now; % e.g. the experiment start
+      %    t0 = @now; % Reference time
       %    events = sig.Registry(@now); % Create our registy
-      %    simpleSignal = net.origin('simpleSignal'); % Create a simple signal to log
-      %    events.signalA = simpleSignal^2; % Log a signal
-      %    events.signalB = simpleSignal.lag(1); % Log another signal
-      %    simpleSignal.post(3) % Post some values to the input signal
-      %    simpleSignal.post(4)
-      %    simpleSignal.post(8)
+      %    events.a = A^2;       % Log a signal
+      %    events.b = A.lag(1);  % Log another signal
+      %    [...]                 % Update signals with values
       %    s = logs(events, t0); % Return our logged signals as a structure
       if nargin == 1; clockOffset = 0; end
       s = struct;
